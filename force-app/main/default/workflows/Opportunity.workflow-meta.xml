@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workflow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <alerts>
+        <fullName>Ready_for_Proposal</fullName>
+        <description>Ready for Proposal</description>
+        <protected>false</protected>
+        <recipients>
+            <recipient>david@animuscrm.com</recipient>
+            <type>user</type>
+        </recipients>
+        <senderType>CurrentUser</senderType>
+        <template>unfiled$public/SalesReadyforProposal</template>
+    </alerts>
+    <alerts>
+        <fullName>Urgent_notification_Ready_for_Proposal</fullName>
+        <description>Urgent notification: Ready for Proposal</description>
+        <protected>false</protected>
+        <recipients>
+            <recipient>david@animuscrm.com</recipient>
+            <type>user</type>
+        </recipients>
+        <senderType>DefaultWorkflowUser</senderType>
+        <template>unfiled$public/SalesReadyforProposal</template>
+    </alerts>
+    <fieldUpdates>
+        <fullName>Closed_Lost_due_to_Failed_qualification</fullName>
+        <field>StageName</field>
+        <literalValue>Closed Lost</literalValue>
+        <name>Closed Lost due to Failed qualification</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Proposal_have_been_delivered</fullName>
+        <field>StageName</field>
+        <literalValue>Proposal/Price Quote</literalValue>
+        <name>Proposal have been delivered</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <rules>
+        <fullName>Pushing sales</fullName>
+        <actions>
+            <name>URGENT_closing_action</name>
+            <type>Task</type>
+        </actions>
+        <active>false</active>
+        <booleanFilter>1 AND 2</booleanFilter>
+        <criteriaItems>
+            <field>Opportunity.StageName</field>
+            <operation>equals</operation>
+            <value>Perception Analysis,Proposal/Price Quote,Negotiation/Review</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Opportunity.CloseDate</field>
+            <operation>equals</operation>
+            <value>NEXT 10 DAYS</value>
+        </criteriaItems>
+        <triggerType>onCreateOrTriggeringUpdate</triggerType>
+        <workflowTimeTriggers>
+            <offsetFromField>Opportunity.CloseDate</offsetFromField>
+            <timeLength>-10</timeLength>
+            <workflowTimeTriggerUnit>Days</workflowTimeTriggerUnit>
+        </workflowTimeTriggers>
+    </rules>
+    <tasks>
+        <fullName>New_proposal_to_be_done</fullName>
+        <assignedToType>owner</assignedToType>
+        <dueDateOffset>1</dueDateOffset>
+        <notifyAssignee>false</notifyAssignee>
+        <priority>High</priority>
+        <protected>false</protected>
+        <status>Not Started</status>
+        <subject>New proposal to be done</subject>
+    </tasks>
+    <tasks>
+        <fullName>URGENT_closing_action</fullName>
+        <assignedToType>owner</assignedToType>
+        <dueDateOffset>0</dueDateOffset>
+        <notifyAssignee>true</notifyAssignee>
+        <priority>High</priority>
+        <protected>false</protected>
+        <status>Not Started</status>
+        <subject>URGENT closing action</subject>
+    </tasks>
+</Workflow>

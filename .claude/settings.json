@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sf project deploy start:*)",
+      "Bash(sf project retrieve start:*)",
+      "Bash(sf apex run test:*)",
+      "Bash(sf org list:*)",
+      "Bash(sf org display:*)",
+      "Bash(sf org login web:*)",
+      "Bash(sf project deploy report:*)",
+      "Bash(sf apex get log:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$(git branch --show-current)\" != \"main\" ] || { echo '{\"block\": true, \"message\": \"Cannot edit files directly on main branch. Create a feature branch first.\"}' >&2; exit 2; }",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "SF_TARGET_ORG": "dev-org"
+  }
+}

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Details_of_Fundraisers</fullName>
+    <columns>OBJECT_ID</columns>
+    <columns>NAME</columns>
+    <columns>CREATEDBY_USER</columns>
+    <columns>CREATEDBY_USER.ALIAS</columns>
+    <columns>CREATED_DATE</columns>
+    <columns>LAST_ACTIVITY</columns>
+    <columns>UPDATEDBY_USER</columns>
+    <columns>UPDATEDBY_USER.ALIAS</columns>
+    <columns>LAST_UPDATE</columns>
+    <columns>OWNER.ALIAS</columns>
+    <columns>Total_Amount__c</columns>
+    <columns>Total_Count__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>Total_Amount__c</field>
+        <operation>greaterThan</operation>
+        <value>1000</value>
+    </filters>
+    <label>Details of Fundraisers</label>
+</ListView>

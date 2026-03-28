@@ -1,0 +1,23 @@
+{
+  "orgName": "AnimusCRM Dev",
+  "edition": "Developer",
+  "features": [
+    "EnableSetPasswordInApi",
+    "PlatformEvents",
+    "Communities"
+  ],
+  "settings": {
+    "lightningExperienceSettings": {
+      "enableS1DesktopEnabled": true
+    },
+    "mobileSettings": {
+      "enableS1EncryptedStoragePref2": false
+    },
+    "languageSettings": {
+      "enableTranslationWorkbench": false
+    },
+    "apexSettings": {
+      "enableAggregateCodeCoverageOnly": false
+    }
+  }
+}

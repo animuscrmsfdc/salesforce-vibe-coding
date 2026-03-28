@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running Apex tests before push..."
+sf apex run test \
+  --target-org dev-org \
+  --test-level RunLocalTests \
+  --code-coverage \
+  --result-format human \
+  --wait 20
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "ERROR: Apex tests failed. Fix all test failures before pushing."
+  echo "To skip (not recommended): git push --no-verify"
+  exit 1
+fi
+
+echo "All Apex tests passed. Proceeding with push."

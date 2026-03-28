@@ -1,0 +1,48 @@
+# Runs automatically when a PR is merged into main.
+# Deploys all source to the dev org and runs all local Apex tests.
+
+name: Deploy to Dev Org
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'force-app/**'
+      - 'manifest/**'
+
+jobs:
+  deploy:
+    name: Deploy metadata to dev-org
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install sf CLI
+        run: npm install -g @salesforce/cli --prefer-global
+
+      - name: Authenticate to dev org via SFDX Auth URL
+        run: |
+          echo "${{ secrets.SFDX_AUTH_URL }}" > ./auth-url.txt
+          sf org login sfdx-url --sfdx-url-file ./auth-url.txt --alias dev-org --set-default
+          rm ./auth-url.txt
+
+      - name: Deploy to dev org (RunLocalTests)
+        run: |
+          sf project deploy start \
+            --source-dir force-app \
+            --target-org dev-org \
+            --test-level RunLocalTests \
+            --wait 30 \
+            --json
+
+      - name: Verify deploy status
+        run: sf project deploy report --json
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Deploy failed. Check the logs above for details."
+          exit 1

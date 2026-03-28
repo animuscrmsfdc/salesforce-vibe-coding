@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionCalls>
+        <name>My_first_action</name>
+        <label>My first action</label>
+        <locationX>197</locationX>
+        <locationY>216</locationY>
+        <actionName>TestInvocableMethodAccounts</actionName>
+        <actionType>apex</actionType>
+        <connector>
+            <targetReference>confirmScreen</targetReference>
+        </connector>
+        <inputParameters>
+            <name>ids</name>
+            <value>
+                <elementReference>recordId</elementReference>
+            </value>
+        </inputParameters>
+        <nameSegment>TestInvocableMethodAccounts</nameSegment>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </actionCalls>
+    <apiVersion>49.0</apiVersion>
+    <assignments>
+        <description>Add the formatted opportunity name {!OppNameTextTemplate} to a text variable that will hold the bulleted list of opportunity names.
+Add the Loop variable (the current record being evaluated in the loop) to a collection {!OppsToClose} of opportunities that will be closed at the end of the loop.</description>
+        <name>Add_to_collection</name>
+        <label>Add to collection</label>
+        <locationX>603</locationX>
+        <locationY>424</locationY>
+        <assignmentItems>
+            <assignToReference>ListofClosedOppNames</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <elementReference>OppNameTextTemplate</elementReference>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>OppsToClose</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <elementReference>LoopVar</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Loop_Through_Open_Opps</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <description>Change the stage of the current opportunity in the loop to &quot;Closed Lost&quot;</description>
+        <name>Mark_Opp_Closed_Lost</name>
+        <label>Mark Opp Closed Lost</label>
+        <locationX>610</locationX>
+        <locationY>283</locationY>
+        <assignmentItems>
+            <assignToReference>LoopVar.StageName</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <stringValue>Closed Lost</stringValue>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>LoopVar.CloseDate</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>Tell_us_what_Close_Date_you_want_to_put</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Add_to_collection</targetReference>
+        </connector>
+    </assignments>
+    <description>Adding new field in screen to capture Close Date and new Exception log</description>
+    <interviewLabel>Close Lost all Open Opps on an Account {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Close Lost all Open Opps on an Account</label>
+    <loops>
+        <description>Initiate a loop to look through all the opportunities that you collected in the previous element one by one.</description>
+        <name>Loop_Through_Open_Opps</name>
+        <label>Loop Through Open Opps</label>
+        <locationX>394</locationX>
+        <locationY>349</locationY>
+        <assignNextValueToReference>LoopVar</assignNextValueToReference>
+        <collectionReference>OpenOpps</collectionReference>
+        <iterationOrder>Asc</iterationOrder>
+        <nextValueConnector>
+            <targetReference>Mark_Opp_Closed_Lost</targetReference>
+        </nextValueConnector>
+        <noMoreValuesConnector>
+            <targetReference>Close_the_opps</targetReference>
+        </noMoreValuesConnector>
+    </loops>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>FREE_FORM_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>Flow</processType>
+    <recordCreates>
+        <name>DEBUG_Create_Exception</name>
+        <label>DEBUG Create Exception</label>
+        <locationX>206</locationX>
+        <locationY>578</locationY>
+        <connector>
+            <targetReference>FailScreen</targetReference>
+        </connector>
+        <inputAssignments>
+            <field>Exception_Details__c</field>
+            <value>
+                <elementReference>$Flow.FaultMessage</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Object__c</field>
+            <value>
+                <stringValue>Account</stringValue>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Operation__c</field>
+            <value>
+                <stringValue>Flow: Update Stage to Closed Lost for this Account</stringValue>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Record_Id__c</field>
+            <value>
+                <elementReference>recordId</elementReference>
+            </value>
+        </inputAssignments>
+        <object>Exception_Log__e</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordCreates>
+    <recordLookups>
+        <description>Get all of the opportunities on this account that are open (is lost = false).  Store the record ids and names in a record</description>
+        <name>Get_All_Open_Opps</name>
+        <label>Get All Open Opps</label>
+        <locationX>16</locationX>
+        <locationY>215</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>My_first_action</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>AccountId</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>recordId</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>IsClosed</field>
+            <operator>EqualTo</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <object>Opportunity</object>
+        <outputReference>OpenOpps</outputReference>
+        <queriedFields>Id</queriedFields>
+        <queriedFields>Name</queriedFields>
+        <sortField>CloseDate</sortField>
+        <sortOrder>Asc</sortOrder>
+    </recordLookups>
+    <recordUpdates>
+        <description>After the last opportunity is evaluated in the loop, update all of the opps in the collection {!OppsToClose} at once.</description>
+        <name>Close_the_opps</name>
+        <label>Close the opps</label>
+        <locationX>393</locationX>
+        <locationY>578</locationY>
+        <connector>
+            <targetReference>Closed_Opps_List_Screen</targetReference>
+        </connector>
+        <faultConnector>
+            <targetReference>DEBUG_Create_Exception</targetReference>
+        </faultConnector>
+        <inputReference>OppsToClose</inputReference>
+    </recordUpdates>
+    <screens>
+        <description>Screen to show the user which opportunities were closed.</description>
+        <name>Closed_Opps_List_Screen</name>
+        <label>Automated Closure of Opportunities</label>
+        <locationX>603</locationX>
+        <locationY>578</locationY>
+        <allowBack>false</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <fields>
+            <name>TitleScreenSuccess</name>
+            <fieldText>&lt;p&gt;&lt;b style=&quot;font-size: 13px;&quot;&gt;Automated Closure of Opportunities&lt;span class=&quot;ql-cursor&quot;&gt;﻿&lt;/span&gt;&lt;/b&gt;&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+        </fields>
+        <fields>
+            <name>DisplayList</name>
+            <fieldText>&lt;p&gt;The following opportunities were marked Closed Lost:&lt;/p&gt;&lt;p&gt;{!ListofClosedOppNames} - {!Tell_us_what_Close_Date_you_want_to_put}&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+        </fields>
+        <showFooter>true</showFooter>
+        <showHeader>false</showHeader>
+    </screens>
+    <screens>
+        <description>Confirm that the user wants to quickly close all of these opportunities.</description>
+        <name>confirmScreen</name>
+        <label>confirmScreen</label>
+        <locationX>393</locationX>
+        <locationY>217</locationY>
+        <allowBack>false</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <connector>
+            <targetReference>Loop_Through_Open_Opps</targetReference>
+        </connector>
+        <fields>
+            <name>TitleScreen1</name>
+            <fieldText>&lt;p&gt;&lt;b style=&quot;font-size: 13px;&quot;&gt;Automated Closure of Opportunities&lt;/b&gt;&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+        </fields>
+        <fields>
+            <name>MyAccount</name>
+            <fieldText>&lt;p&gt;Account Name: {!My_first_action}&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+        </fields>
+        <fields>
+            <name>ConfirmQuestion</name>
+            <fieldText>&lt;p&gt;&lt;span style=&quot;font-size: 18px;&quot;&gt;Are you sure?&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Click &lt;b&gt;Next&lt;/b&gt; to mark the following opportunities &lt;b&gt;Closed Lost&lt;/b&gt;.&lt;/p&gt;&lt;p&gt;{!ListofClosedOppNames}&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+        </fields>
+        <fields>
+            <name>Tell_us_what_Close_Date_you_want_to_put</name>
+            <dataType>Date</dataType>
+            <defaultValue>
+                <elementReference>$Flow.CurrentDate</elementReference>
+            </defaultValue>
+            <fieldText>Tell us what Close Date you want to put:</fieldText>
+            <fieldType>InputField</fieldType>
+            <isRequired>true</isRequired>
+        </fields>
+        <showFooter>true</showFooter>
+        <showHeader>false</showHeader>
+    </screens>
+    <screens>
+        <name>FailScreen</name>
+        <label>FailScreen</label>
+        <locationX>59</locationX>
+        <locationY>579</locationY>
+        <allowBack>false</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <fields>
+            <name>TitleScreenFail</name>
+            <fieldText>&lt;p&gt;&lt;b style=&quot;font-size: 13px;&quot;&gt;Automated Closure of Opportunities&lt;/b&gt;&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+        </fields>
+        <fields>
+            <name>FailMessage</name>
+            <fieldText>&lt;p&gt;&lt;span style=&quot;color: rgb(247, 3, 3);&quot;&gt;Ups - something happened...the Opportunities couldn&apos;t be changed to Closed Lost.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Please reach out to your awesome SalesF-R-O-G Admin and provide this Exception Id: {!DEBUG_Create_Exception}&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+        </fields>
+        <showFooter>true</showFooter>
+        <showHeader>false</showHeader>
+    </screens>
+    <start>
+        <locationX>50</locationX>
+        <locationY>50</locationY>
+        <connector>
+            <targetReference>Get_All_Open_Opps</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+    <textTemplates>
+        <description>Bullet point format for the opportunity name when it is added to the list that is displayed on the final screen.</description>
+        <name>OppNameTextTemplate</name>
+        <isViewedAsPlainText>false</isViewedAsPlainText>
+        <text>&lt;TEXTFORMAT LEADING=&quot;2&quot;&gt;&lt;LI&gt;{!LoopVar.Name}&lt;/FONT&gt;&lt;/LI&gt;&lt;/TEXTFORMAT&gt;</text>
+    </textTemplates>
+    <variables>
+        <description>Text which displays the list of closed opportunities at the end of the Flow. Data is assigned to this variable using the text template {!OppNameTextTemplate}.</description>
+        <name>ListofClosedOppNames</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+    <variables>
+        <description>The LoopVar holds the information about the particular record being evaluated in the loop for each go round.</description>
+        <name>LoopVar</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Opportunity</objectType>
+    </variables>
+    <variables>
+        <description>All open opportunities on this account.</description>
+        <name>OpenOpps</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Opportunity</objectType>
+    </variables>
+    <variables>
+        <description>All opportunities that have been modified and the changes are ready to be committed to the database.</description>
+        <name>OppsToClose</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Opportunity</objectType>
+    </variables>
+    <variables>
+        <description>The quick action button sends the ID of the Account to this variable.</description>
+        <name>recordId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+</Flow>

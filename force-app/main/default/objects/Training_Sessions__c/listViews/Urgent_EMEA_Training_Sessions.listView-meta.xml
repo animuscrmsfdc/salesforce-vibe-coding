@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Urgent_EMEA_Training_Sessions</fullName>
+    <filterScope>Queue</filterScope>
+    <label>Urgent EMEA</label>
+    <queue>Urgent_EMEA</queue>
+    <sharedTo>
+        <allInternalUsers></allInternalUsers>
+    </sharedTo>
+</ListView>

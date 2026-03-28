@@ -1,0 +1,45 @@
+# Runs on every Pull Request targeting main.
+# Performs a check-only deploy (no changes committed to org) and runs all local Apex tests.
+# The PR cannot be merged if this workflow fails.
+
+name: Validate PR
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'force-app/**'
+      - 'manifest/**'
+
+jobs:
+  validate:
+    name: Validate metadata & run Apex tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install sf CLI
+        run: npm install -g @salesforce/cli --prefer-global
+
+      - name: Authenticate to dev org via SFDX Auth URL
+        run: |
+          echo "${{ secrets.SFDX_AUTH_URL }}" > ./auth-url.txt
+          sf org login sfdx-url --sfdx-url-file ./auth-url.txt --alias dev-org --set-default
+          rm ./auth-url.txt
+
+      - name: Validate deploy (check-only, RunLocalTests)
+        run: |
+          sf project deploy start \
+            --source-dir force-app \
+            --target-org dev-org \
+            --dry-run \
+            --test-level RunLocalTests \
+            --wait 30 \
+            --json
+
+      - name: Report results
+        if: always()
+        run: sf project deploy report --json || true

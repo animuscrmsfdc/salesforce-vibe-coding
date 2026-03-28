@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workflow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <alerts>
+        <fullName>Follow_up_this_Hot_Lead_bigger_than_100_000_of_revenue</fullName>
+        <ccEmails>dsanchez@redk.net</ccEmails>
+        <description>Follow up this Hot Lead bigger than 100.000 of revenue</description>
+        <protected>false</protected>
+        <recipients>
+            <field>Email</field>
+            <type>email</type>
+        </recipients>
+        <recipients>
+            <recipient>david@animuscrm.com</recipient>
+            <type>user</type>
+        </recipients>
+        <senderType>CurrentUser</senderType>
+        <template>unfiled$public/SalesNewCustomerEmail</template>
+    </alerts>
+    <rules>
+        <fullName>Follow up this Hot lead</fullName>
+        <actions>
+            <name>Follow_up_this_Hot_Lead_bigger_than_100_000_of_revenue</name>
+            <type>Alert</type>
+        </actions>
+        <active>true</active>
+        <criteriaItems>
+            <field>Lead.AnnualRevenue</field>
+            <operation>greaterOrEqual</operation>
+            <value>100000</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Lead.Rating</field>
+            <operation>equals</operation>
+            <value>Hot</value>
+        </criteriaItems>
+        <triggerType>onCreateOrTriggeringUpdate</triggerType>
+        <workflowTimeTriggers>
+            <actions>
+                <name>Follow_up_this_hot_deal</name>
+                <type>Task</type>
+            </actions>
+            <offsetFromField>Lead.LastModifiedDate</offsetFromField>
+            <timeLength>1</timeLength>
+            <workflowTimeTriggerUnit>Days</workflowTimeTriggerUnit>
+        </workflowTimeTriggers>
+    </rules>
+    <tasks>
+        <fullName>Follow_up_this_hot_deal</fullName>
+        <assignedTo>david@animuscrm.com</assignedTo>
+        <assignedToType>user</assignedToType>
+        <dueDateOffset>0</dueDateOffset>
+        <notifyAssignee>false</notifyAssignee>
+        <priority>Normal</priority>
+        <protected>false</protected>
+        <status>Not Started</status>
+        <subject>Follow up this hot deal</subject>
+    </tasks>
+</Workflow>

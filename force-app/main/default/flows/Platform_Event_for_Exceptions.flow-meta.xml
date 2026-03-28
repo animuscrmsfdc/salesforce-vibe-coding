@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionCalls>
+        <name>Send_email_if_fail</name>
+        <label>Send email if fail</label>
+        <locationX>440</locationX>
+        <locationY>278</locationY>
+        <actionName>emailSimple</actionName>
+        <actionType>emailSimple</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>emailBody</name>
+            <value>
+                <stringValue>Error in Platform Event flow</stringValue>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>emailAddresses</name>
+            <value>
+                <stringValue>ds@thehotelsnetwork.com</stringValue>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>emailSubject</name>
+            <value>
+                <stringValue>Error in Platform Event flow</stringValue>
+            </value>
+        </inputParameters>
+        <nameSegment>emailSimple</nameSegment>
+    </actionCalls>
+    <apiVersion>49.0</apiVersion>
+    <description>Adding a new custom notification</description>
+    <environments>Default</environments>
+    <interviewLabel>Platform Event for Exceptions {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Platform Event for Exceptions</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordCreates>
+        <name>Create_new_Exception</name>
+        <label>Create new Exception</label>
+        <locationX>176</locationX>
+        <locationY>170</locationY>
+        <faultConnector>
+            <targetReference>Send_email_if_fail</targetReference>
+        </faultConnector>
+        <inputAssignments>
+            <field>Exception_Details__c</field>
+            <value>
+                <elementReference>$Record.Exception_Details__c</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Object__c</field>
+            <value>
+                <elementReference>$Record.Object__c</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Operation__c</field>
+            <value>
+                <elementReference>$Record.Operation__c</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>OwnerId</field>
+            <value>
+                <elementReference>$Record.CreatedById</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Record_Id__c</field>
+            <value>
+                <elementReference>$Record.Record_Id__c</elementReference>
+            </value>
+        </inputAssignments>
+        <object>Exception__c</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordCreates>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Create_new_Exception</targetReference>
+        </connector>
+        <object>Exception_Log__e</object>
+        <triggerType>PlatformEvent</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>
