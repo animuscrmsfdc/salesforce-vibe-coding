@@ -100,6 +100,10 @@
     </types>
     <types>
         <members>*</members>
+        <name>GlobalValueSet</name>
+    </types>
+    <types>
+        <members>*</members>
         <name>CustomLabel</name>
     </types>
     <types>

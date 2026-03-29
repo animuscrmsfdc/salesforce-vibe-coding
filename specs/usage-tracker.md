@@ -58,7 +58,9 @@ Sections and field order:
 Columns: Name, Account, Status, Quantity, Usage Start Date, Usage End Date
 
 #### Access
-Grant Read + Edit access to the **System Administrator** profile for the object and all fields.
+Create a dedicated Permission Set `Usage_Manager` granting Read + Edit object access and field-level Read + Edit on all `Usage__c` fields. Assign the Permission Set to System Administrator via the UI post-deploy.
+
+> **Note:** Direct profile metadata edits are avoided — deploying a full profile file via DX can silently remove unrelated permissions. Permission Set is the safe, recommended approach.
 
 ---
 
@@ -71,9 +73,9 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
 | Label | Platform Usages |
 | Plural Label | Platform Usages |
 | API Name | `Platform_Usages__e` |
-| Event Type | StandardVolume |
+| Event Type | HighVolume |
 | Publish Behavior | `PublishAfterCommit` |
-| Description | CloudEvents-compliant platform event for Usage record lifecycle observability via Dynatrace Salesforce Insights. |
+| Description | CloudEvents-compliant platform event for Usage record lifecycle observability via Dynatrace Salesforce Insights. HighVolume chosen to match org pattern and avoid StandardVolume daily limits. |
 
 #### Fields
 
@@ -81,7 +83,7 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
 |---|---|---|---|---|
 | Data Content Type | `datacontenttype__c` | Text | 50 | CloudEvents: MIME type of `data__c` (e.g. `application/json`) |
 | Data Schema | `dataschema__c` | Text | 255 | CloudEvents: URI identifying the schema of `data__c` |
-| Event Data | `data__c` | Long Text Area | 32768 | CloudEvents: JSON payload — serialised Usage record fields |
+| Event Data | `data__c` | Long Text Area | 32768 | CloudEvents: JSON-serialised snapshot of the full `Usage__c` record (`JSON.serialize(usage)`). Not a field-by-field mapping — the CloudEvents envelope fields (`type__c`, `subject__c`, etc.) carry the metadata; `data__c` carries the payload. |
 | Event Time | `time__c` | DateTime | — | CloudEvents: timestamp of event occurrence (`System.now()`) |
 | Event Type | `type__c` | Text | 255 | CloudEvents: e.g. `com.animuscrm.usage.created` / `com.animuscrm.usage.updated` |
 | Parent ID | `parentid__c` | Text | 18 | ⚠️ Increased from 255 → 18 (Salesforce IDs are exactly 18 chars) |
@@ -161,7 +163,7 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
 - Then a validation error is shown on the `Quantity__c` field
 
 ### AC-6: Access control
-- Given a user with the System Administrator profile
+- Given a user assigned the `Usage_Manager` Permission Set
 - Then they can create, read, edit, and delete `Usage__c` records and see all fields
 
 ### AC-7: Test coverage ≥ 90%
@@ -178,6 +180,7 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
 - Custom UI (LWC or Visualforce) for the `Usage__c` object — standard Salesforce layouts only
 - Data migration or backfilling of historical Usage records as events
 - Integration with any system other than Dynatrace Salesforce Insights
-- Permission Sets for non-System Administrator profiles — only the Admin profile is in scope
+- Assigning the `Usage_Manager` Permission Set to any profile other than System Administrator
+- Direct editing of profile metadata files (e.g. `Admin.profile-meta.xml`) — use Permission Sets only
 - Workflow rules, Process Builder, or Flow automation on `Usage__c`
 - Reporting or dashboards on `Usage__c` data

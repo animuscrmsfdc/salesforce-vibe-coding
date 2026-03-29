@@ -1,6 +1,6 @@
 ---
 name: salesforce-developer-apex
-description: Apex development skills for animuscrm — triggers (Kevin O'Hara framework), classes, platform event publishing, and security enforcement.
+description: Apex development skills for animuscrm — triggers (static switch-based handler pattern), classes, platform event publishing, and security enforcement.
 ---
 
 # Salesforce Developer Apex Skill — animuscrm
@@ -9,14 +9,30 @@ Covers Apex trigger development, class structure, and security enforcement patte
 
 ---
 
-## Framework Mandate: Kevin O'Hara Trigger Pattern
+## Trigger Pattern — animuscrm Standard
 
-**When asked to create or modify an Apex trigger, you MUST use the Kevin O'Hara trigger framework pattern. Never put business logic directly in a trigger body.**
+**This project uses a static switch-based trigger handler pattern. All existing triggers follow this convention — new triggers MUST follow the same pattern for consistency.**
 
-Before writing any trigger code:
-1. Check whether a `TriggerHandler` base class already exists in `force-app/main/default/classes/`
-2. If it does not exist, ask the user whether to add it (reference: https://github.com/kevinohara80/sfdc-trigger-framework)
-3. If it exists, extend it — do not create a second base class
+The pattern:
+- Trigger body contains only a `switch on Trigger.operationType` block
+- Each `when` branch calls a static method on the handler class
+- No business logic in the trigger body
+- No base class required
+
+```apex
+trigger UsageTrigger on Usage__c (after insert, after update) {
+    switch on Trigger.operationType {
+        when AFTER_INSERT {
+            UsageTriggerHandler.afterInsertHandler(Trigger.new);
+        }
+        when AFTER_UPDATE {
+            UsageTriggerHandler.afterUpdateHandler(Trigger.new, Trigger.oldMap);
+        }
+    }
+}
+```
+
+> Note: The Kevin O'Hara TriggerHandler framework is NOT used in this project. Do not add a TriggerHandler base class unless the user explicitly requests a full migration of all existing triggers to that pattern.
 
 ---
 
@@ -25,23 +41,22 @@ Before writing any trigger code:
 **Trigger phrase:** "create a trigger" / "new trigger for"
 
 ### Rules
-- **One trigger per object.** If a trigger already exists for the object, extend the existing handler — do not create a second trigger.
+- **One trigger per object.** If a trigger already exists for the object, extend the existing handler class — do not create a second trigger.
 - Business logic goes in the handler class, never in the trigger body.
-- Use `TriggerHandler.bypass('HandlerName')` and `TriggerHandler.clearBypass('HandlerName')` for recursion control and selective disabling — do not use custom static flags when the framework is present.
+- For recursion control, use a static Boolean flag on the handler class (no base class is present in this project).
 
 ### Steps
-1. Check for existing trigger on the object — warn and stop if one exists
+1. Check `force-app/main/default/triggers/` — warn and stop if a trigger for this object already exists
 2. Create `force-app/main/default/triggers/<Object>Trigger.trigger`
-   - Include only the events specified (default: before insert, before update, after insert, after update)
-   - Delegate immediately to handler: `new <Object>TriggerHandler().run();`
+   - Use `switch on Trigger.operationType` with only the required events
+   - Each branch calls a static method on the handler: `<Object>TriggerHandler.afterInsertHandler(Trigger.new)`
    - No logic in the trigger body
 3. Create `force-app/main/default/triggers/<Object>Trigger.trigger-meta.xml`
    - `apiVersion`: 66.0, `status`: Active
 4. Create `force-app/main/default/classes/<Object>TriggerHandler.cls`
-   - Extends `TriggerHandler` base class if available
-   - `public with sharing class`
-   - Separate override methods per event: `beforeInsert`, `afterInsert`, `beforeUpdate`, `afterUpdate`, etc.
-   - Access `Trigger.new`, `Trigger.old`, `Trigger.newMap`, `Trigger.oldMap` via inherited context
+   - `public with sharing class` — no base class
+   - Public static methods per event: `afterInsertHandler(List<SObject> newRecords)`, `afterUpdateHandler(List<SObject> newRecords, Map<Id,SObject> oldMap)`, etc.
+   - Delegate to a service class for business logic — keep handler methods as thin dispatchers
 5. Create `force-app/main/default/classes/<Object>TriggerHandler.cls-meta.xml`
 6. Deploy command:
    ```
@@ -60,7 +75,7 @@ Before writing any trigger code:
 |------|---------|-------------|
 | `controller` | `with sharing` | `@AuraEnabled` methods, `Security.stripInaccessible()` on results |
 | `service` | `with sharing` | Static methods, `WITH SECURITY_ENFORCED` on all SOQL |
-| `trigger-handler` | `with sharing` | Extends TriggerHandler, override methods per event |
+| `trigger-handler` | `with sharing` | Public static methods per event, delegates to service class |
 | `batch` | `global` | Implements `Database.Batchable<SObject>`, start/execute/finish |
 | `schedulable` | `global` | Implements `Schedulable`, execute(SchedulableContext sc) |
 | `queueable` | `public` | Implements `Queueable`, execute(QueueableContext ctx) |
@@ -95,44 +110,49 @@ Use this pattern whenever Apex needs to publish a Platform Event — from a trig
 - Field mapping between source SObject and the event must be explicit — no dynamic field assignment
 - This pattern fires `after insert` or `after update` — never `before` context (records need IDs)
 
-### Pattern: Publish from a Trigger Handler
+### Pattern: Publish from a Service Class (animuscrm pattern)
 ```apex
-public with sharing class UsageTriggerHandler extends TriggerHandler {
+public with sharing class UsageEventService {
 
-    override protected void afterInsert() {
-        publishUsageEvents((List<Usage__c>) Trigger.new);
-    }
-
-    override protected void afterUpdate() {
-        publishUsageEvents((List<Usage__c>) Trigger.new);
-    }
-
-    private static void publishUsageEvents(List<Usage__c> usages) {
+    public static void publishEvents(List<Usage__c> usages, String eventType) {
         List<Platform_Usages__e> events = new List<Platform_Usages__e>();
 
         for (Usage__c u : usages) {
             Platform_Usages__e evt = new Platform_Usages__e();
-            // Map fields explicitly by API name
-            evt.source__c      = u.Source__c;
-            evt.type__c        = u.Type__c;
-            evt.subject__c     = String.valueOf(u.Id);
-            evt.time__c        = System.now();
-            evt.specversion__c = '1.0';
-            // ... map remaining fields
+            // CloudEvents envelope fields
+            evt.specversion__c    = '1.0';
+            evt.type__c           = eventType; // e.g. 'com.animuscrm.usage.created'
+            evt.source__c         = URL.getOrgDomainUrl().toExternalForm();
+            evt.subject__c        = u.Id;
+            evt.time__c           = System.now();
+            evt.datacontenttype__c = 'application/json';
+            // Payload: JSON-serialise the Usage record
+            evt.data__c           = JSON.serialize(u);
             events.add(evt);
         }
 
-        List<Database.SaveResult> results = EventBus.publish(events);
-
-        for (Integer i = 0; i < results.size(); i++) {
-            if (!results.get(i).isSuccess()) {
-                for (Database.Error err : results.get(i).getErrors()) {
-                    // Log the failure — use your org's error logging pattern
-                    System.debug(LoggingLevel.ERROR,
-                        'Platform event publish failed for Usage ' +
-                        usages.get(i).Id + ': ' + err.getMessage());
+        try {
+            List<Database.SaveResult> results = EventBus.publish(events);
+            for (Integer i = 0; i < results.size(); i++) {
+                if (!results.get(i).isSuccess()) {
+                    for (Database.Error err : results.get(i).getErrors()) {
+                        // Log using this org's Exception_Log__e fields
+                        EventBus.publish(new Exception_Log__e(
+                            Object__c          = 'Usage__c',
+                            Operation__c       = 'PublishPlatformEvent',
+                            Record_Id__c       = usages.get(i).Id,
+                            Exception_Details__c = err.getStatusCode() + ': ' + err.getMessage()
+                        ));
+                    }
                 }
             }
+        } catch (Exception e) {
+            EventBus.publish(new Exception_Log__e(
+                Object__c          = 'Usage__c',
+                Operation__c       = 'PublishPlatformEvent',
+                Record_Id__c       = null,
+                Exception_Details__c = e.getMessage() + '\n' + e.getStackTraceString()
+            ));
         }
     }
 }
@@ -145,15 +165,11 @@ public with sharing class UsageTriggerHandler extends TriggerHandler {
 4. Iterate results — log any `isSuccess() == false` entries with the record ID and error message
 5. Wrap the entire method in `try/catch(Exception e)` and log unexpected failures
 6. Never put `EventBus.publish()` inside a loop — always bulk-collect events first, publish once
-7. If the org has an `Exception_Log__e` platform event (this org does), use it for error logging:
-   ```apex
-   } catch (Exception e) {
-       EventBus.publish(new Exception_Log__e(
-           Message__c = e.getMessage(),
-           Stack_Trace__c = e.getStackTraceString()
-       ));
-   }
-   ```
+7. This org's `Exception_Log__e` has these fields — always use these exact API names:
+   - `Object__c` (Text 80) — the SObject being processed
+   - `Operation__c` (Text 250) — the operation name (e.g. `'PublishPlatformEvent'`)
+   - `Record_Id__c` (Text 18) — the affected record's ID
+   - `Exception_Details__c` (LongTextArea 32768) — full error message and stack trace
 
 ### Governor Limit Notes
 - `EventBus.publish()` counts against DML statement limits (150 per transaction)
