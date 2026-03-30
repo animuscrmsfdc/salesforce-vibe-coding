@@ -10,6 +10,26 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.2.0] - 2026-03-30
+
+### Added
+- `Usage__c` custom object with fields: `Account__c` (required lookup), `OrderProduct__c`, `Quantity__c`, `UsageStartDate__c`, `UsageEndDate__c`, `Status__c` (restricted picklist: New, Error, Processed)
+- `Platform_Usages__e` HighVolume platform event with 13 CloudEvents 1.0 fields (`specversion__c`, `type__c`, `source__c`, `subject__c`, `time__c`, `datacontenttype__c`, `data__c`, `dataschema__c`, `parentid__c`, `traceid__c`, `tracestate__c`, `traceflags__c`, `version__c`)
+- `UsageTrigger` — after insert/after update trigger on `Usage__c`
+- `UsageTriggerHandler` — static switch-based handler following project trigger pattern
+- `UsageEventService` — bulk-safe service class; publishes `Platform_Usages__e` CloudEvents on insert and update; errors logged to `Exception_Log__e`
+- `UsageEventServiceTest` — Apex test class with ≥90% code coverage
+- `Usage__c-Usage Layout` — two-column page layout covering all fields
+- `Usage_Manager` permission set — grants CRUD on `Usage__c` with FLS for non-required fields
+- `UsageStatus` global value set backing the `Status__c` picklist
+- Validation rules: `EndDate_Must_Be_After_StartDate`, `Quantity_Must_Be_Positive`
+- `specs/usage-tracker.md` — feature spec with acceptance criteria
+
+### Changed
+- `manifest/package.xml` — added `GlobalValueSet` and `Layout` metadata types
+
+---
+
 ## [0.1.0] - 2026-03-28
 
 ### Added
