@@ -1,4 +1,4 @@
-# Feature: Usage Tracker
+# Feature: Usage Tracker via Platform Event
 
 ## Summary
 When a `Usage__c` record is created or updated in Salesforce, a corresponding Platform Event (`Platform_Usages__e`) is published automatically. This event follows the [CloudEvents 1.0 specification](https://cloudevents.io/) and is consumed by the Dynatrace **Salesforce Insights** extension for observability and monitoring of internal Salesforce processes.
