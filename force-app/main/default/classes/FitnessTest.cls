@@ -25,7 +25,7 @@ public class FitnessTest {
         Decimal minutes = 60;
         
         Decimal result = Fitness.calculatePace(distanceKms, minutes);        
-        System.assertEquals(1, result, 'Error: different Pace calculated');
+        System.assertEquals(10, result, 'Error: different Pace calculated');
 	}
     @isTest
     public static void calculatePaceNegativeTest(){

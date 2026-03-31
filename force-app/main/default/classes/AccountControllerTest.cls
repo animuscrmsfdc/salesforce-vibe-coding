@@ -26,6 +26,12 @@ private class AccountControllerTest {
             ));
         }
         insert cases;
+
+        // Backdate CreatedDate so daysBetween > 0
+        Datetime fiveDaysAgo = Datetime.now().addDays(-5);
+        for (Case c : cases) {
+            Test.setCreatedDate(c.Id, fiveDaysAgo);
+        }
     }
 
     @isTest
