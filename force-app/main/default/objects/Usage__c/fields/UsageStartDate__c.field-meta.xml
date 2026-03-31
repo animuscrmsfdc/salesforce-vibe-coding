@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>UsageStartDate__c</fullName>
+    <description>Start date of the usage period. Required. Must be on or before Usage End Date.</description>
+    <externalId>false</externalId>
+    <isFilteringDisabled>false</isFilteringDisabled>
+    <isNameField>false</isNameField>
+    <isSortingDisabled>false</isSortingDisabled>
+    <label>Usage Start Date</label>
+    <required>true</required>
+    <trackHistory>false</trackHistory>
+    <type>Date</type>
+</CustomField>

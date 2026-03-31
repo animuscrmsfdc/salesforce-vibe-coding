@@ -42,4 +42,4 @@ jobs:
 
       - name: Report results
         if: always()
-        run: sf project deploy report --json || true
+        run: sf project deploy report --use-most-recent --json || true

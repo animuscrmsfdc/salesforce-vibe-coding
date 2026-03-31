@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>OrderProduct__c</fullName>
+    <description>Lookup to the Order Product (OrderItem) associated with this usage record. Optional. Delete is restricted to prevent orphaned usage records.</description>
+    <deleteConstraint>Restrict</deleteConstraint>
+    <externalId>false</externalId>
+    <isFilteringDisabled>false</isFilteringDisabled>
+    <isNameField>false</isNameField>
+    <isSortingDisabled>false</isSortingDisabled>
+    <label>Order Product</label>
+    <referenceTo>OrderItem</referenceTo>
+    <relationshipLabel>Usages</relationshipLabel>
+    <relationshipName>OrderProductUsages</relationshipName>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <type>Lookup</type>
+</CustomField>

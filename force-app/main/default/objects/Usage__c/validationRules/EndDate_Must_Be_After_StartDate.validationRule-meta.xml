@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EndDate_Must_Be_After_StartDate</fullName>
+    <active>true</active>
+    <description>Prevents saving a Usage record where the End Date is before the Start Date. Only fires when End Date is populated.</description>
+    <errorConditionFormula>AND(NOT(ISBLANK(UsageEndDate__c)), UsageEndDate__c &lt; UsageStartDate__c)</errorConditionFormula>
+    <errorDisplayField>UsageEndDate__c</errorDisplayField>
+    <errorMessage>End Date must be on or after Start Date.</errorMessage>
+</ValidationRule>

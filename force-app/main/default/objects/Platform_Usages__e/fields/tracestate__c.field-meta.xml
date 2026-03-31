@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>tracestate__c</fullName>
+    <description>W3C TraceContext: Vendor-specific trace state information for propagating distributed trace context.</description>
+    <externalId>false</externalId>
+    <isFilteringDisabled>false</isFilteringDisabled>
+    <isNameField>false</isNameField>
+    <isSortingDisabled>false</isSortingDisabled>
+    <label>Trace State</label>
+    <length>1000</length>
+    <required>false</required>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>
