@@ -44,4 +44,26 @@
             System.assert(existingPortalUser.fax == randFax);
         }
     }
+
+    // -----------------------------------------------------------------------
+    // Scenario — save(): edit then save sets isEdit back to false
+    // -----------------------------------------------------------------------
+    @IsTest
+    static void testSave_updatesUser() {
+        User runningUser = [SELECT Id, Title FROM User WHERE Id = :UserInfo.getUserId()];
+
+        System.runAs(runningUser) {
+            MyProfilePageController controller = new MyProfilePageController();
+
+            Test.startTest();
+            controller.edit();
+            System.assertEquals(true, controller.getIsEdit(), 'isEdit should be true after edit()');
+
+            controller.getUser().Title = 'Test Title';
+            controller.save();
+            Test.stopTest();
+
+            System.assertEquals(false, controller.getIsEdit(), 'isEdit should be false after save()');
+        }
+    }
 }
