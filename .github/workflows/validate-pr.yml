@@ -24,6 +24,27 @@ jobs:
       - name: Install sf CLI
         run: npm install -g @salesforce/cli --prefer-global
 
+      - name: Install Salesforce Code Analyzer
+        run: sf plugins install @salesforce/sfdx-scanner --no-prompt
+
+      - name: Run PMD static analysis
+        run: |
+          sf scanner run \
+            --target "force-app/main/default/classes,force-app/main/default/triggers" \
+            --engine pmd \
+            --pmdconfig pmd-ruleset.xml \
+            --format sarif \
+            --outfile pmd-results.sarif \
+            --normalize-severity \
+            --severity-threshold 2
+
+      - name: Upload PMD results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pmd-results
+          path: pmd-results.sarif
+
       - name: Authenticate to dev org via SFDX Auth URL
         run: |
           echo "${{ secrets.SFDX_AUTH_URL }}" > ./auth-url.txt
