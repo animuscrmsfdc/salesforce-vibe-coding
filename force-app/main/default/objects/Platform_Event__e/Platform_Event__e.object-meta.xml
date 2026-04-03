@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>CloudEvents-compliant unified HighVolume platform event for SObject lifecycle observability via Dynatrace Salesforce Insights. Single canonical event replacing Platform_Usages__e; covers Usage__c, Exception__c, and future tracked objects. Published via PlatformEventService.</description>
+    <eventType>HighVolume</eventType>
+    <label>Platform Event</label>
+    <pluralLabel>Platform Events</pluralLabel>
+    <publishBehavior>PublishAfterCommit</publishBehavior>
+</CustomObject>
