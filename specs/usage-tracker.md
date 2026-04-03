@@ -110,17 +110,22 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
 ### Handler Class — `UsageTriggerHandler`
 - Extends `TriggerHandler`
 - Overrides `afterInsert()` and `afterUpdate()`
-- Calls `UsageEventService.publishEvents(List<Usage__c>)`
+- Calls `PlatformEventService.publishEvents((List<SObject>) records, eventType)`
 
-### Service Class — `UsageEventService`
+### Service Class — `PlatformEventService` (canonical generic service)
 - `public with sharing`
-- Method: `public static void publishEvents(List<Usage__c> usages)`
+- Method: `public static void publishEvents(List<SObject> records, String eventType)`
+- Publishes to `Platform_Event__e` (unified CloudEvents event shared with Exception tracking)
 - Responsibilities:
-  1. Build a `List<Platform_Usages__e>` mapping fields from `Usage__c` to `Platform_Usages__e` by API name where they match
-  2. Set CloudEvents mandatory fields: `specversion__c = '1.0'`, `time__c = System.now()`, `subject__c = usage.Id`, `type__c` based on trigger context (created vs updated)
+  1. Build a `List<Platform_Event__e>` from the SObject list — sets CloudEvents fields generically via `rec.Id` and `JSON.serialize(rec)`
+  2. Truncate `data__c` payload at 20,000 chars appending `...[TRUNCATED]` to stay within the 32,768-char LongTextArea limit
   3. Call `EventBus.publish(events)` once (never inside a loop)
   4. Check each `Database.SaveResult` — log failures via `Exception_Log__e` platform event
   5. Wrap in `try/catch(Exception e)` — publish to `Exception_Log__e` on unexpected failure
+
+### Deprecated — `UsageEventService`
+- Retained as a compatibility shim that delegates to `PlatformEventService`
+- Schedule for deletion after `UsageEventServiceTest` is migrated to `PlatformEventServiceTest`
 
 ### Error Handling
 - Use the existing `Exception_Log__e` platform event already in this org for all error logging
@@ -184,3 +189,15 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
 - Direct editing of profile metadata files (e.g. `Admin.profile-meta.xml`) — use Permission Sets only
 - Workflow rules, Process Builder, or Flow automation on `Usage__c`
 - Reporting or dashboards on `Usage__c` data
+
+---
+
+## Refactoring Notes (Option B Migration)
+
+The original implementation used `UsageEventService` publishing to `Platform_Usages__e`. As of the Option B canonical service refactor:
+
+- `UsageTriggerHandler` now calls `PlatformEventService.publishEvents((List<SObject>) records, eventType)`.
+- Events are published to `Platform_Event__e` (unified CloudEvents event) instead of `Platform_Usages__e`.
+- `UsageEventService` is retained as a deprecated shim; schedule for deletion after `UsageEventServiceTest` is migrated to `PlatformEventServiceTest`.
+- `Platform_Usages__e` remains deployed but receives no new events post-refactor.
+- **Dynatrace action required:** Update the Streaming API subscription from `/event/Platform_Usages__e/` to `/event/Platform_Event__e/`. Filter on `type__c` values `com.animuscrm.usage.created` and `com.animuscrm.usage.updated`. **Do not deploy the `UsageTriggerHandler` changes until Dynatrace confirms the new subscription is active** — Usage observability will be blind in the window between deploy and Dynatrace reconfiguration.

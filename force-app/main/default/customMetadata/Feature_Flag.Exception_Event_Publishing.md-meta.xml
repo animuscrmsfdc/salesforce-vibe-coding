@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Exception Event Publishing</label>
+    <protected>false</protected>
+    <values>
+        <field>Description__c</field>
+        <value xsi:type="xsd:string">Feature flag controlling whether Exception__c after-insert events are published to Platform_Event__e. Set Enabled__c = false to disable publishing without undeploying the trigger. ExceptionTriggerHandler reads this flag on every execution.</value>
+    </values>
+    <values>
+        <field>Enabled__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>English__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>Spanish__c</field>
+        <value xsi:nil="true"/>
+    </values>
+</CustomMetadata>

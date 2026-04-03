@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>data__c</fullName>
+    <description>CloudEvents: JSON-serialised snapshot of the full SObject record (JSON.serialize(record)). Truncated at 20,000 chars with ...[TRUNCATED] suffix if payload exceeds limit. Carries the event payload; CloudEvents envelope fields carry the metadata.</description>
+    <externalId>false</externalId>
+    <isFilteringDisabled>false</isFilteringDisabled>
+    <isNameField>false</isNameField>
+    <isSortingDisabled>false</isSortingDisabled>
+    <label>Event Data</label>
+    <length>32768</length>
+    <required>false</required>
+    <type>LongTextArea</type>
+    <visibleLines>5</visibleLines>
+</CustomField>
