@@ -123,9 +123,9 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
   4. Check each `Database.SaveResult` — log failures via `Exception_Log__e` platform event
   5. Wrap in `try/catch(Exception e)` — publish to `Exception_Log__e` on unexpected failure
 
-### Deprecated — `UsageEventService`
-- Retained as a compatibility shim that delegates to `PlatformEventService`
-- Schedule for deletion after `UsageEventServiceTest` is migrated to `PlatformEventServiceTest`
+### Deleted — `UsageEventService`
+- Was retained as a compatibility shim delegating to `PlatformEventService`
+- Deleted after test scenarios migrated to `PlatformEventServiceTest`
 
 ### Error Handling
 - Use the existing `Exception_Log__e` platform event already in this org for all error logging
@@ -172,7 +172,7 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
 - Then they can create, read, edit, and delete `Usage__c` records and see all fields
 
 ### AC-7: Test coverage ≥ 90%
-- `UsageTrigger`, `UsageTriggerHandler`, and `UsageEventService` each have ≥ 90% Apex code coverage
+- `UsageTrigger`, `UsageTriggerHandler`, and `PlatformEventService` each have ≥ 90% Apex code coverage
 - Test class covers: insert, update, bulk (200), publish failure simulation
 
 ---
@@ -198,6 +198,6 @@ The original implementation used `UsageEventService` publishing to `Platform_Usa
 
 - `UsageTriggerHandler` now calls `PlatformEventService.publishEvents((List<SObject>) records, eventType)`.
 - Events are published to `Platform_Event__e` (unified CloudEvents event) instead of `Platform_Usages__e`.
-- `UsageEventService` is retained as a deprecated shim; schedule for deletion after `UsageEventServiceTest` is migrated to `PlatformEventServiceTest`.
+- `UsageEventService` has been deleted; `UsageEventServiceTest` migrated into `PlatformEventServiceTest`.
 - `Platform_Usages__e` remains deployed but receives no new events post-refactor.
 - **Dynatrace action required:** Update the Streaming API subscription from `/event/Platform_Usages__e/` to `/event/Platform_Event__e/`. Filter on `type__c` values `com.animuscrm.usage.created` and `com.animuscrm.usage.updated`. **Do not deploy the `UsageTriggerHandler` changes until Dynatrace confirms the new subscription is active** — Usage observability will be blind in the window between deploy and Dynatrace reconfiguration.
