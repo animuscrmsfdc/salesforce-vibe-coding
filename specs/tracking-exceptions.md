@@ -162,7 +162,7 @@ Option B has been implemented. `PlatformEventService` is the canonical generic s
 **Implemented approach:**
 - `PlatformEventService.publishEvents(List<SObject>, String eventType)` is the single publish entry point for all tracked objects.
 - `Platform_Event__e` is the unified platform event used by both Usage tracking and Exception tracking.
-- `UsageEventService` is retained as a deprecated shim delegating to `PlatformEventService`; scheduled for deletion after `UsageEventServiceTest` is migrated to `PlatformEventServiceTest`.
+- `UsageEventService` has been deleted; test scenarios migrated into `PlatformEventServiceTest`.
 
 **Trade-offs accepted:**
 - Truncated JSON in `data__c` is syntactically invalid — Dynatrace consumers must handle the `...[TRUNCATED]` suffix.
@@ -202,7 +202,7 @@ Option B has been implemented. `PlatformEventService` is the canonical generic s
 2. Deploy `Feature_Flag__mdt` record `Exception_Event_Publishing` (with `Enabled__c = true`).
 3. Deploy `PlatformEventService` Apex class.
 4. **Coordinate with Dynatrace** to update Streaming API subscription to `/event/Platform_Event__e/`.
-5. Deploy `UsageEventService` (shim) and `UsageTriggerHandler` (updated).
+5. Deploy `UsageTriggerHandler` (updated to call `PlatformEventService`).
 6. Deploy `ExceptionTriggerHandler` and `ExceptionTrigger`.
 7. Deploy `Exception_Tracker` permission set.
 8. **Manual post-deploy:** Assign `Exception_Tracker` permission set to relevant non-Sys-Admin users.
