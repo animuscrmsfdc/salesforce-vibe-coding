@@ -36,6 +36,22 @@ private class PlatformEventServiceTest {
         System.assertEquals('New', inserted[0].Status__c, 'Status should default to New');
     }
 
+    // Usage after update — via trigger → handler → PlatformEventService
+    @IsTest
+    static void testUsageAfterUpdate_publishesEvent() {
+        Account acc = getAccount();
+        Usage__c usage = buildUsage(acc.Id);
+        insert usage;
+
+        Test.startTest();
+        usage.Status__c = 'Processed';
+        update usage;
+        Test.stopTest();
+
+        Usage__c updated = [SELECT Status__c FROM Usage__c WHERE Id = :usage.Id];
+        System.assertEquals('Processed', updated.Status__c, 'Status should be updated to Processed');
+    }
+
     // Usage bulk insert — 200 records
     @IsTest
     static void testUsageBulkInsert_200Records() {
@@ -50,6 +66,31 @@ private class PlatformEventServiceTest {
         Test.stopTest();
 
         System.assertEquals(200, [SELECT COUNT() FROM Usage__c], 'All 200 Usage records should be inserted');
+    }
+
+    // Usage bulk update — 200 records
+    @IsTest
+    static void testUsageBulkUpdate_200Records() {
+        Account acc = getAccount();
+        List<Usage__c> usages = new List<Usage__c>();
+        for (Integer i = 0; i < 200; i++) {
+            usages.add(buildUsage(acc.Id));
+        }
+        insert usages;
+
+        for (Usage__c u : usages) {
+            u.Status__c = 'Processed';
+        }
+
+        Test.startTest();
+        update usages;
+        Test.stopTest();
+
+        System.assertEquals(
+            200,
+            [SELECT COUNT() FROM Usage__c WHERE Status__c = 'Processed'],
+            'All 200 records should be updated to Processed'
+        );
     }
 
     // Exception single insert — via trigger → handler → PlatformEventService
@@ -194,6 +235,79 @@ private class PlatformEventServiceTest {
 
         List<Exception__c> inserted = [SELECT Id FROM Exception__c WHERE Id = :exc.Id];
         System.assertEquals(1, inserted.size(), 'Exception record should be inserted regardless of flag state');
+    }
+
+    // Validation rule — EndDate before StartDate
+    @IsTest
+    static void testValidation_endDateBeforeStartDate() {
+        Account acc = getAccount();
+        Usage__c usage = new Usage__c(
+            Account__c        = acc.Id,
+            UsageStartDate__c = Date.today(),
+            UsageEndDate__c   = Date.today().addDays(-1),
+            Quantity__c       = 1.0,
+            Status__c         = 'New'
+        );
+
+        Test.startTest();
+        try {
+            insert usage;
+            System.assert(false, 'Expected DmlException for EndDate before StartDate');
+        } catch (DmlException e) {
+            System.assert(
+                e.getMessage().contains('End Date must be on or after Start Date'),
+                'Error message should match validation rule: ' + e.getMessage()
+            );
+        }
+        Test.stopTest();
+    }
+
+    // Validation rule — Quantity zero
+    @IsTest
+    static void testValidation_quantityZero() {
+        Account acc = getAccount();
+        Usage__c usage = new Usage__c(
+            Account__c        = acc.Id,
+            UsageStartDate__c = Date.today(),
+            Quantity__c       = 0,
+            Status__c         = 'New'
+        );
+
+        Test.startTest();
+        try {
+            insert usage;
+            System.assert(false, 'Expected DmlException for Quantity = 0');
+        } catch (DmlException e) {
+            System.assert(
+                e.getMessage().contains('Quantity must be greater than zero'),
+                'Error message should match validation rule: ' + e.getMessage()
+            );
+        }
+        Test.stopTest();
+    }
+
+    // Validation rule — Quantity negative
+    @IsTest
+    static void testValidation_quantityNegative() {
+        Account acc = getAccount();
+        Usage__c usage = new Usage__c(
+            Account__c        = acc.Id,
+            UsageStartDate__c = Date.today(),
+            Quantity__c       = -5.0,
+            Status__c         = 'New'
+        );
+
+        Test.startTest();
+        try {
+            insert usage;
+            System.assert(false, 'Expected DmlException for negative Quantity');
+        } catch (DmlException e) {
+            System.assert(
+                e.getMessage().contains('Quantity must be greater than zero'),
+                'Error message should match validation rule: ' + e.getMessage()
+            );
+        }
+        Test.stopTest();
     }
 
     // runAs user with Exception_Tracker permission set — insert succeeds and trigger fires
