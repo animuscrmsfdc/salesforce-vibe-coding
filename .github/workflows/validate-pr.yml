@@ -25,7 +25,7 @@ jobs:
         run: npm install -g @salesforce/cli --prefer-global
 
       - name: Install Salesforce Code Analyzer
-        run: sf plugins install @salesforce/sfdx-scanner --no-prompt
+        run: sf plugins install @salesforce/sfdx-scanner
 
       - name: Run PMD static analysis
         run: |
