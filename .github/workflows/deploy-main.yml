@@ -39,7 +39,7 @@ jobs:
             --json
 
       - name: Verify deploy status
-        run: sf project deploy report --json
+        run: sf project deploy report --use-most-recent --json
 
       - name: Notify on failure
         if: failure()
