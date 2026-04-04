@@ -1,7 +1,7 @@
 # Feature: Usage Tracker via Platform Event
 
 ## Summary
-When a `Usage__c` record is created or updated in Salesforce, a corresponding Platform Event (`Platform_Usages__e`) is published automatically. This event follows the [CloudEvents 1.0 specification](https://cloudevents.io/) and is consumed by the Dynatrace **Salesforce Insights** extension for observability and monitoring of internal Salesforce processes.
+When a `Usage__c` record is created or updated in Salesforce, a corresponding Platform Event (`Platform_Event__e`) is published automatically. This event follows the [CloudEvents 1.0 specification](https://cloudevents.io/) and is consumed by the Dynatrace **Salesforce Insights** extension for observability and monitoring of internal Salesforce processes.
 
 **Motivation:** Provide real-time visibility into Usage record lifecycle events without polling the database, using a standards-compliant event payload that Dynatrace can ingest natively.
 
@@ -64,18 +64,20 @@ Create a dedicated Permission Set `Usage_Manager` granting Read + Edit object ac
 
 ---
 
-### 3. Platform Event — `Platform_Usages__e`
+### 3. Platform Event — `Platform_Event__e` *(canonical, unified)*
 
-Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interoperability with Dynatrace Salesforce Insights.
+> **Note:** `Platform_Usages__e` was the original platform event for this feature. It was replaced by `Platform_Event__e` as part of the Option B canonical service refactor and **deleted from the org**. See [Refactoring Notes](#refactoring-notes-option-b-migration) below.
+
+Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interoperability with Dynatrace Salesforce Insights. Shared with Exception tracking — `type__c` distinguishes the source object.
 
 | Property | Value |
 |---|---|
-| Label | Platform Usages |
-| Plural Label | Platform Usages |
-| API Name | `Platform_Usages__e` |
+| Label | Platform Event |
+| Plural Label | Platform Events |
+| API Name | `Platform_Event__e` |
 | Event Type | HighVolume |
 | Publish Behavior | `PublishAfterCommit` |
-| Description | CloudEvents-compliant platform event for Usage record lifecycle observability via Dynatrace Salesforce Insights. HighVolume chosen to match org pattern and avoid StandardVolume daily limits. |
+| Description | Unified CloudEvents-compliant platform event for SObject lifecycle observability via Dynatrace Salesforce Insights. Covers Usage__c, Exception__c, and future tracked objects. |
 
 #### Fields
 
@@ -83,19 +85,17 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
 |---|---|---|---|---|
 | Data Content Type | `datacontenttype__c` | Text | 50 | CloudEvents: MIME type of `data__c` (e.g. `application/json`) |
 | Data Schema | `dataschema__c` | Text | 255 | CloudEvents: URI identifying the schema of `data__c` |
-| Event Data | `data__c` | Long Text Area | 32768 | CloudEvents: JSON-serialised snapshot of the full `Usage__c` record (`JSON.serialize(usage)`). Not a field-by-field mapping — the CloudEvents envelope fields (`type__c`, `subject__c`, etc.) carry the metadata; `data__c` carries the payload. |
+| Event Data | `data__c` | Long Text Area | 32768 | CloudEvents: JSON-serialised snapshot of the SObject record. Truncated at 20,000 chars with `...[TRUNCATED]` suffix. |
 | Event Time | `time__c` | DateTime | — | CloudEvents: timestamp of event occurrence (`System.now()`) |
 | Event Type | `type__c` | Text | 255 | CloudEvents: e.g. `com.animuscrm.usage.created` / `com.animuscrm.usage.updated` |
-| Parent ID | `parentid__c` | Text | 18 | ⚠️ Increased from 255 → 18 (Salesforce IDs are exactly 18 chars) |
-| Source | `source__c` | Text | 255 | CloudEvents: URI identifying the event producer (e.g. Salesforce org URL) |
+| Parent ID | `parentid__c` | Text | 18 | Salesforce parent record ID (18 chars exact) |
+| Source | `source__c` | Text | 255 | CloudEvents: URI identifying the event producer — set to `System.URL.getOrgDomainUrl().toExternalForm()` |
 | Spec Version | `specversion__c` | Text | 20 | CloudEvents: always `1.0` |
-| Subject | `subject__c` | Text | 255 | CloudEvents: the Usage record ID (`Usage__c.Id`) |
-| Trace Flags | `traceflags__c` | Text | 8 | W3C TraceContext: 2-char hex sampling flags (e.g. `01`) — ⚠️ increased from 8 → sufficient; confirm with Dynatrace spec |
-| Trace ID | `traceid__c` | Text | 32 | ⚠️ Increased from 255 → 32 (W3C TraceContext trace-id is exactly 32 hex chars) |
+| Subject | `subject__c` | Text | 255 | CloudEvents: the SObject record ID |
+| Trace Flags | `traceflags__c` | Text | 8 | W3C TraceContext: 2-char hex sampling flags — set by Dynatrace |
+| Trace ID | `traceid__c` | Text | 32 | W3C TraceContext: 32-char hex trace ID — set by Dynatrace |
 | Trace State | `tracestate__c` | Long Text Area | 1000 | W3C TraceContext: vendor-specific trace state |
 | Trace Version | `version__c` | Text | 10 | W3C TraceContext: always `00` for current spec |
-
-> **Field size improvements applied:** `parentid__c` reduced to 18 chars (exact Salesforce ID length), `traceid__c` reduced to 32 chars (exact W3C trace-id length). These save storage and prevent accidental garbage values. Confirm `traceflags__c` length with Dynatrace if values longer than 2 chars are expected.
 
 ---
 
@@ -104,12 +104,12 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
 ### Trigger — `UsageTrigger`
 - Object: `Usage__c`
 - Events: `after insert`, `after update`
-- Pattern: Kevin O'Hara TriggerHandler framework — no business logic in the trigger body
+- Pattern: Static switch-based handler — `switch on Trigger.operationType` in the trigger body; no base class or framework dependency
 - Delegate to: `UsageTriggerHandler`
 
 ### Handler Class — `UsageTriggerHandler`
-- Extends `TriggerHandler`
-- Overrides `afterInsert()` and `afterUpdate()`
+- Plain `public with sharing` class; no base class
+- Static methods: `afterInsertHandler(List<Usage__c>)` and `afterUpdateHandler(List<Usage__c>, Map<Id,Usage__c>)`; called directly from `UsageTrigger` via `switch on Trigger.operationType`
 - Calls `PlatformEventService.publishEvents((List<SObject>) records, eventType)`
 
 ### Service Class — `PlatformEventService` (canonical generic service)
@@ -139,7 +139,7 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
 ### AC-1: Usage record created → event published
 - Given a `Usage__c` record is inserted with valid fields
 - When the transaction commits
-- Then exactly one `Platform_Usages__e` event is published with `type__c = 'com.animuscrm.usage.created'`
+- Then exactly one `Platform_Event__e` event is published with `type__c = 'com.animuscrm.usage.created'`
 - And `subject__c` equals the new record's 18-char ID
 - And `specversion__c = '1.0'`
 - And `time__c` is populated with the current timestamp
@@ -147,12 +147,12 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
 ### AC-2: Usage record updated → event published
 - Given an existing `Usage__c` record is updated
 - When the transaction commits
-- Then exactly one `Platform_Usages__e` event is published with `type__c = 'com.animuscrm.usage.updated'`
+- Then exactly one `Platform_Event__e` event is published with `type__c = 'com.animuscrm.usage.updated'`
 - And `subject__c` equals the updated record's ID
 
 ### AC-3: Bulk — 200 records
 - Given 200 `Usage__c` records are inserted in a single transaction
-- Then 200 `Platform_Usages__e` events are published in a single `EventBus.publish()` call
+- Then 200 `Platform_Event__e` events are published in a single `EventBus.publish()` call
 - And no governor limit exception is thrown
 
 ### AC-4: Publish failure is logged, not re-thrown
@@ -179,7 +179,7 @@ Follows the [CloudEvents 1.0 specification](https://cloudevents.io/) for interop
 
 ## Out of Scope
 
-- Subscribing to `Platform_Usages__e` in Apex, Flow, or any other Salesforce component — consumption is handled entirely by Dynatrace externally
+- Subscribing to `Platform_Event__e` in Apex, Flow, or any other Salesforce component — consumption is handled entirely by Dynatrace externally
 - Deletion of `Usage__c` records does not publish an event
 - Replaying or reprocessing past platform events
 - Custom UI (LWC or Visualforce) for the `Usage__c` object — standard Salesforce layouts only
@@ -199,5 +199,5 @@ The original implementation used `UsageEventService` publishing to `Platform_Usa
 - `UsageTriggerHandler` now calls `PlatformEventService.publishEvents((List<SObject>) records, eventType)`.
 - Events are published to `Platform_Event__e` (unified CloudEvents event) instead of `Platform_Usages__e`.
 - `UsageEventService` has been deleted; `UsageEventServiceTest` migrated into `PlatformEventServiceTest`.
-- `Platform_Usages__e` remains deployed but receives no new events post-refactor.
-- **Dynatrace action required:** Update the Streaming API subscription from `/event/Platform_Usages__e/` to `/event/Platform_Event__e/`. Filter on `type__c` values `com.animuscrm.usage.created` and `com.animuscrm.usage.updated`. **Do not deploy the `UsageTriggerHandler` changes until Dynatrace confirms the new subscription is active** — Usage observability will be blind in the window between deploy and Dynatrace reconfiguration.
+- `Platform_Usages__e` has been **deleted from the org** via `destructiveChanges.xml`.
+- **Dynatrace action required:** Update the Streaming API subscription from `/event/Platform_Usages__e/` to `/event/Platform_Event__e/`. Filter on `type__c` values `com.animuscrm.usage.created` and `com.animuscrm.usage.updated`.

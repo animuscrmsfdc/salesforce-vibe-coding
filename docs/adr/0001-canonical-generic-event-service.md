@@ -11,7 +11,7 @@ The animuscrm org needed real-time exception observability via Dynatrace Salesfo
 
 ## Decision
 
-We replace `UsageEventService` with a single generic `PlatformEventService.publishEvents(List<SObject>, String eventType)` that publishes to a unified `Platform_Event__e` object. `UsageEventService` is retained as a deprecated shim delegating to `PlatformEventService`. A dedicated `Platform_Exceptions__e` is not created. `ExceptionTriggerHandler` uses `PlatformEventService` directly. Any future SObject tracking is added by registering a new trigger + handler pair — no new service or platform event object is needed.
+We replace `UsageEventService` with a single generic `PlatformEventService.publishEvents(List<SObject>, String eventType)` that publishes to a unified `Platform_Event__e` object. `UsageEventService` and `UsageEventServiceTest` were deleted; all test scenarios were migrated into `PlatformEventServiceTest`. A dedicated `Platform_Exceptions__e` is not created. `ExceptionTriggerHandler` uses `PlatformEventService` directly. Any future SObject tracking is added by registering a new trigger + handler pair — no new service or platform event object is needed.
 
 ## Alternatives Considered
 
@@ -35,9 +35,9 @@ We replace `UsageEventService` with a single generic `PlatformEventService.publi
 
 ### Negative
 - `List<Usage__c>` requires an explicit `(List<SObject>)` cast at every call site — compile-time covariance is not available in Apex
-- `UsageEventService` must be kept as a shim until `UsageEventServiceTest` is migrated to avoid a breaking change in test coverage
-- `Platform_Usages__e` remains deployed but receives no new events post-refactor — orphaned object until cleaned up
+- `UsageEventService` and `UsageEventServiceTest` were deleted; test scenarios migrated into `PlatformEventServiceTest` — any external callers of `UsageEventService` would break (none existed outside the test class)
+- `Platform_Usages__e` was deleted from the org via `destructiveChanges.xml` and removed from `force-app` — Dynatrace must reconfigure its Streaming API subscription from `/event/Platform_Usages__e/` to `/event/Platform_Event__e/` with `type__c` filtering
 
 ### Risks
-- **Dynatrace subscription break**: Dynatrace is subscribed to `/event/Platform_Usages__e/`. Deploying `UsageTriggerHandler` changes before Dynatrace reconfigures to `/event/Platform_Event__e/` will create a window of zero Usage observability. Mitigation: coordinate deployment of Wave 3 (`UsageTriggerHandler`) with the Dynatrace team; do not merge until they confirm the new subscription is live.
+- **Dynatrace subscription break**: Dynatrace was subscribed to `/event/Platform_Usages__e/`. A coordination window was required between deploying `UsageTriggerHandler` and Dynatrace reconfiguring to `/event/Platform_Event__e/`. `Platform_Usages__e` has since been deleted from the org — confirm with Dynatrace that the new subscription is active and no events are being missed.
 - **Truncated JSON**: `data__c` payload is truncated at 20,000 chars, producing syntactically invalid JSON. Dynatrace consumers must tolerate the `...[TRUNCATED]` suffix. Mitigation: document in open questions; confirm with Dynatrace team before GA.
