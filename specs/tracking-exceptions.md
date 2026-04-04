@@ -69,13 +69,19 @@ When an Apex class or Flow fails, an `Exception__c` record is created automatica
   - **Mechanism:** `Feature_Flag__mdt` (Custom Metadata Type) — chosen over Custom Settings because it is deployable via metadata API / change sets, version-controlled alongside Apex, and does not require DML to toggle; no per-user or per-profile granularity is needed for this flag.
   - **Record developer name:** `Exception_Event_Publishing`
   - **Default value:** `Enabled__c = true` (publishing active by default)
-  - **Check location:** `ExceptionTriggerHandler.afterInsertHandler()` queries `[SELECT Enabled__c FROM Feature_Flag__mdt WHERE DeveloperName = 'Exception_Event_Publishing' LIMIT 1]` and returns early if `Enabled__c = false` or the record is missing; `PlatformEventService` is never invoked.
+  - **Check location:** `ExceptionTriggerHandler.afterInsertHandler()` queries `Feature_Flag__mdt` using a bind variable — always use `:flagName` rather than an inline string literal to establish the correct pattern for future parameterised calls:
+    ```apex
+    String flagName = 'Exception_Event_Publishing';
+    Feature_Flag__mdt flag = [SELECT Enabled__c FROM Feature_Flag__mdt
+        WHERE DeveloperName = :flagName LIMIT 1];
+    ```
+    The handler returns early if `Enabled__c = false` or the record is missing; `PlatformEventService` is never invoked.
   - **Disabling effect:** No `Platform_Event__e` events are published; no `Exception_Log__e` error events are generated; `Exception__c` DML is unaffected.
 - **Patterns:** Trigger → Handler → Service (same pattern as `UsageTrigger` / `UsageTriggerHandler` / `PlatformEventService`)
 - **Bulkification:** Must handle 200+ records per transaction; all events collected before single `EventBus.publish()` call
 - **CloudEvents fields on `Platform_Event__e`** (shared with Usage tracking):
   `specversion__c`, `type__c`, `source__c`, `subject__c`, `time__c`, `datacontenttype__c`, `data__c`, `dataschema__c`, `parentid__c`, `traceid__c`, `traceflags__c`, `tracestate__c`, `version__c`
-- **Event type value:** `com.animuscrm.exception.created`
+- **Event type value:** `com.animuscrm.exception.created` — this is the only registered value for this feature. The `eventType` parameter of `PlatformEventService.publishEvents()` must be one of the constants defined in the service class (e.g. `PlatformEventService.EVENT_TYPE_EXCEPTION_CREATED`). Free-form strings are prohibited; unrecognised `type__c` values are silently ignored by Dynatrace.
 - **Data truncation:** `PlatformEventService` truncates the JSON-serialised payload at 20,000 chars appending `...[TRUNCATED]`. This applies to all SObject types generically. Truncated JSON is syntactically invalid; Dynatrace consumers must check for the `...[TRUNCATED]` suffix.
 
 ---
@@ -113,7 +119,8 @@ When an Apex class or Flow fails, an `Exception__c` record is created automatica
 ### AC-3: Publish failure is logged, not re-thrown
 - Given `EventBus.publish()` returns a failure result for one or more events
 - When the service processes the results
-- Then each failure is logged via `Exception_Log__e` and the transaction is not rolled back
+- Then all failures are collected and logged via a single `EventBus.publish()` call to `Exception_Log__e` (not one call per failure)
+- And the transaction is not rolled back
 
 ### AC-4: Empty list is handled gracefully
 - Given `PlatformEventService.publishEvents()` is called with a null or empty list
@@ -123,7 +130,7 @@ When an Apex class or Flow fails, an `Exception__c` record is created automatica
 ### AC-5: CloudEvents envelope fields are populated
 - Given a `Platform_Event__e` event is published
 - When inspected
-- Then `specversion__c = '1.0'`, `source__c` equals the org domain URL, `datacontenttype__c = 'application/json'`, and `time__c` is set to publish time
+- Then `specversion__c = '1.0'`, `source__c` equals `System.URL.getOrgDomainUrl().toExternalForm()`, `datacontenttype__c = 'application/json'`, and `time__c` is set to publish time
 
 ### AC-6: Permission set grants correct access
 - Given a user assigned the `Exception_Tracker` permission set (non-Sys Admin)
@@ -166,7 +173,7 @@ Option B has been implemented. `PlatformEventService` is the canonical generic s
 
 **Trade-offs accepted:**
 - Truncated JSON in `data__c` is syntactically invalid — Dynatrace consumers must handle the `...[TRUNCATED]` suffix.
-- Dynatrace must reconfigure its Streaming API subscription from `/event/Platform_Usages__e/` to `/event/Platform_Event__e/` with `type__c` filtering. **Do not deploy the `UsageTriggerHandler` changes until Dynatrace confirms the new subscription is active.**
+- Dynatrace must reconfigure its Streaming API subscription from `/event/Platform_Usages__e/` to `/event/Platform_Event__e/` with `type__c` filtering. `Platform_Usages__e` has been deleted from the org.
 
 **Option A (dedicated classes)** was not implemented. A canonical generic service story covering Option A is no longer relevant.
 
@@ -185,12 +192,12 @@ Option B has been implemented. `PlatformEventService` is the canonical generic s
 ### Bulkification
 - All events are collected in a `List<Platform_Event__e>` before the single `EventBus.publish()` call.
 - `EventBus.publish()` is never called inside a `for` loop.
-- Trigger handler uses `Trigger.new` collections; no SOQL inside the trigger or handler (feature flag query in handler is exempt — Custom Metadata queries are platform-cached).
+- Trigger handler uses `Trigger.new` collections; no SOQL inside the trigger or handler. The feature flag query (`[SELECT Enabled__c FROM Feature_Flag__mdt WHERE DeveloperName = ... LIMIT 1]`) is executed once per trigger invocation, before any `for` loop, and must never be placed inside a loop. Custom Metadata queries are served from the platform metadata cache (no database round-trip) but still consume a SOQL governor limit count.
 
 ### Governor Limit Considerations
 - **`EventBus.publish()` limit:** 150 `EventBus.publish()` calls per transaction. This feature uses one call per transaction — no risk even at high volume.
 - **Platform event message size:** `data__c` is a LongTextArea (32,768 chars). `PlatformEventService` truncates the serialised JSON at 20,000 chars, leaving ample headroom for JSON escape overhead.
-- **DML rows limit (10,000):** Error logging publishes one `Exception_Log__e` per failed event. In the worst case (200 failures), this is 200 additional `EventBus.publish()` calls in the error loop — within the 150-call-per-transaction limit only if errors are batched. Current implementation logs individually; this is acceptable for expected failure rates.
+- **`EventBus.publish()` error-path limit:** `PlatformEventService` must collect all `Exception_Log__e` error records into a list and publish them in a single `EventBus.publish()` call — the same pattern used for the main events. Individual per-failure publishes inside a loop are prohibited: in the worst case (200 failures in AC-2's bulk scenario) they would consume 200 of the 150 allowed calls, breaching the governor limit. The implementation must batch error log events before publishing.
 
 ### Test Data Strategy
 - `@TestSetup` for all shared test data — no data creation in individual test methods.
@@ -212,5 +219,5 @@ Option B has been implemented. `PlatformEventService` is the canonical generic s
 | # | Question | Owner | Status |
 |---|---|---|---|
 | 1 | Should `Platform_Event__e` TraceContext fields (`traceid__c`, `traceflags__c`, `tracestate__c`, `version__c`) be populated by Apex or only by Dynatrace? | David / Dynatrace team | Open |
-| 2 | `PlatformEventService` truncates serialised JSON at 20,000 chars; truncated payload is invalid JSON. Does Dynatrace require valid JSON or can it handle the `...[TRUNCATED]` suffix? | David / Dynatrace team | Open |
-| 3 | Is `Exception__c` after-update also in scope (e.g. if an exception record is enriched later)? The interview confirmed after-insert only — confirm this is correct. | David | Open |
+| 2 | `PlatformEventService` truncates serialised JSON at 20,000 chars; truncated payload is invalid JSON. Does Dynatrace require valid JSON or can it handle the `...[TRUNCATED]` suffix? **GA blocker — must be resolved before production deploy.** If Dynatrace requires valid JSON, migrate to a `data_truncated__c` boolean field and truncate `data__c` at a safe JSON boundary. Owner must confirm Dynatrace's position and update this row to Closed with the agreed approach before any production deployment. | David / Dynatrace team | Open — GA blocker, deadline 2026-04-10 |
+| 3 | Is `Exception__c` after-update also in scope (e.g. if an exception record is enriched later)? | David | **Closed — Confirmed out of scope.** After-insert only. If after-update is required in future, open a new feature story. |
