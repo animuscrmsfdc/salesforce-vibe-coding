@@ -248,4 +248,4 @@ Key architectural decisions are documented in [docs/adr/](docs/adr/):
 
 ### Licensing
 
-This project is private. All Salesforce metadata, Apex code, and Claude Code configuration are proprietary to AnimusCRM. Not licensed for redistribution.
+This project is under MIT license.
