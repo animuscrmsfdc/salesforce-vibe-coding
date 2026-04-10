@@ -101,3 +101,10 @@ Steps:
     ```
 
 13. Confirm success by showing the output of the push command. If the push fails, report the error and do not retry automatically.
+
+14. **On successful push**, if the commit message (from step 8) contains the word "refactor" (case-insensitive), update `~/.claude/projects/-Users-david-sanchezcarmona-animuscrm/memory/project_context.md`:
+    - Get the current branch: `git branch --show-current`
+    - If the branch starts with `feature/`, extract the slug (everything after `feature/`).
+    - Find the entry under `### Shipped` whose spec path is `specs/<slug>.md` — refactors during active development (In Progress) are noise and must not be recorded.
+    - If a matching Shipped entry is found, append `Refactored: <today's date ISO 8601>.` to that entry's line.
+    - If the branch is not `feature/*`, the slug maps to an In Progress entry, or no match is found — do nothing.

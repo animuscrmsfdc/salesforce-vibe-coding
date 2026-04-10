@@ -54,6 +54,11 @@
 - Never use `SeeAllData=true`
 - Run tests: `sf apex run test --target-org animuscrm --code-coverage`
 
+## Git Branch Conventions
+- Feature branches: `feature/<spec-slug>` where `<spec-slug>` matches the spec filename exactly (e.g. spec `specs/order-management.md` → branch `feature/order-management`)
+- Hotfix branches: `hotfix/<short-description>` (e.g. `hotfix/fix-null-pointer`)
+- This convention is used by `/deploy`, `/run-tests`, and `/auto-commit-push` to deterministically link a branch to its spec and `project_context.md` entry — no ambiguity, no prompting
+
 ## What NOT to Do
 - Never hard-code Org IDs or record IDs
 - Never write SOQL without a WHERE clause on large objects
