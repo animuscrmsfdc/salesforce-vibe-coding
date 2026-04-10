@@ -221,8 +221,33 @@ After filling in the user-provided sections, add the **Analyst Additions** secti
 
 ---
 
-## Step 5 — Confirm and Show Location
+## Step 5 — Create Feature Branch
 
-After writing the file, tell the user:
+Create and switch to the feature branch using the spec slug as the branch name:
 
-> "Spec saved to `specs/<feature-name>.md`. Review it and use `/find-weaknesses` to cross-check against the implementation once built."
+```
+git checkout -b feature/<feature-name>
+```
+
+Where `<feature-name>` is the exact filename slug from Step 1 (e.g. spec `specs/order-management.md` → branch `feature/order-management`).
+
+This is the project's branch naming convention — it links the branch deterministically to its spec and enables `/deploy`, `/run-tests`, and `/auto-commit-push` to update `project_context.md` without prompting.
+
+---
+
+## Step 6 — Update Project Memory
+
+Update `~/.claude/projects/-Users-david-sanchezcarmona-animuscrm/memory/project_context.md`.
+
+Under `### In Progress`, add:
+`- **<Feature Name>** (\`specs/<feature-name>.md\`): <one-sentence summary of what it does and which domain object it uses>.`
+
+Do not modify any other section.
+
+---
+
+## Step 7 — Confirm and Show Location
+
+After writing the spec, creating the branch, and updating memory, tell the user:
+
+> "Spec saved to `specs/<feature-name>.md`. Branch `feature/<feature-name>` is ready. Use `/find-weaknesses` to cross-check against the implementation once built."

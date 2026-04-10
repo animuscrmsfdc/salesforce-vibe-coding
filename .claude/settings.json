@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$(git branch --show-current)\" != \"main\" ] || { echo '{\"block\": true, \"message\": \"Cannot edit files directly on main branch. Create a feature branch first.\"}' >&2; exit 2; }",
+            "command": "INPUT=$(cat); FILE=$(echo \"$INPUT\" | python3 -c \"import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('file_path',''))\" 2>/dev/null || echo ''); [[ \"$FILE\" == /Users/david.sanchezcarmona/animuscrm/* ]] && [[ \"$(git -C /Users/david.sanchezcarmona/animuscrm branch --show-current 2>/dev/null)\" == \"main\" ]] && { echo '{\"block\": true, \"message\": \"Cannot edit files directly on main branch. Create a feature branch first.\"}' >&2; exit 2; } || true",
             "timeout": 5
           }
         ]
