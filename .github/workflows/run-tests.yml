@@ -26,10 +26,10 @@ jobs:
         run: npm install -g @salesforce/cli --prefer-global
 
       - name: Authenticate to dev org via SFDX Auth URL
+        env:
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
         run: |
-          echo "${{ secrets.SFDX_AUTH_URL }}" > ./auth-url.txt
-          sf org login sfdx-url --sfdx-url-file ./auth-url.txt --alias dev-org --set-default
-          rm ./auth-url.txt
+          sf org login sfdx-url --sfdx-url-file <(echo "$SFDX_AUTH_URL") --alias dev-org --set-default
 
       - name: Run all Apex tests with coverage
         if: ${{ inputs.test_class == '' }}
