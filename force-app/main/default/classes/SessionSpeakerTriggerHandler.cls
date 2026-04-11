@@ -30,7 +30,6 @@ public with sharing class SessionSpeakerTriggerHandler {
             SELECT Id, Session_Date__c, End_Date__c, Status__c
             FROM Session__c
             WHERE Id IN :sessionIds
-            WITH SECURITY_ENFORCED
         ]) {
             sessionMap.put(s.Id, s);
         }
@@ -45,22 +44,13 @@ public with sharing class SessionSpeakerTriggerHandler {
 
         // Lock existing Session_Speaker__c rows for the affected speakers to prevent race conditions.
         // Exclude bookings on cancelled sessions to avoid false-positive overlap rejections.
-        List<Session_Speaker__c> existingAssignments;
-        try {
-            existingAssignments = [
-                SELECT Id, Speaker__c, Session__r.Session_Date__c, Session__r.End_Date__c
-                FROM Session_Speaker__c
-                WHERE Speaker__c IN :speakerIds
-                  AND Session__r.Status__c != 'Cancelled'
-                WITH SECURITY_ENFORCED
-                FOR UPDATE
-            ];
-        } catch (System.QueryException ex) {
-            for (Session_Speaker__c a : assignments) {
-                a.addError('Insufficient permissions to validate speaker availability. Contact your administrator.');
-            }
-            return;
-        }
+        List<Session_Speaker__c> existingAssignments = [
+            SELECT Id, Speaker__c, Session__r.Session_Date__c, Session__r.End_Date__c
+            FROM Session_Speaker__c
+            WHERE Speaker__c IN :speakerIds
+              AND Session__r.Status__c != 'Cancelled'
+            FOR UPDATE
+        ];
 
         // Build overlap map: speakerId -> (existingAssignmentId -> [start, end])
         // Keyed by assignment Id so each record's own previous window can be excluded

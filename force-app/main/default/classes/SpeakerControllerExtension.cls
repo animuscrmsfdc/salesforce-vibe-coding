@@ -36,15 +36,7 @@ public with sharing class SpeakerControllerExtension {
                 }
                 insert toInsert;
 
-                Speaker__c toUpdate = new Speaker__c(
-                    Id = speaker.Id,
-                    Picture_ContentDocument__c = toInsert.Id
-                );
-                SObjectAccessDecision updateDecision = Security.stripInaccessible(
-                    AccessType.UPDATABLE,
-                    new List<Speaker__c>{ toUpdate }
-                );
-                update (Speaker__c) updateDecision.getRecords()[0];
+                update new Speaker__c(Id = speaker.Id, Picture_ContentDocument__c = toInsert.Id);
             }
 
             return new ApexPages.StandardController(speaker).view();
