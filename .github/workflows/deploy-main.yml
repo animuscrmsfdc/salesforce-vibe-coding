@@ -24,10 +24,10 @@ jobs:
         run: npm install -g @salesforce/cli --prefer-global
 
       - name: Authenticate to dev org via SFDX Auth URL
-        env:
-          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
         run: |
-          sf org login sfdx-url --sfdx-url-file <(echo "$SFDX_AUTH_URL") --alias dev-org --set-default
+          echo "${{ secrets.SFDX_AUTH_URL }}" > /tmp/sfdx_auth.txt
+          sf org login sfdx-url --sfdx-url-file /tmp/sfdx_auth.txt --alias dev-org --set-default
+          rm /tmp/sfdx_auth.txt
 
       - name: Deploy to dev org (RunLocalTests)
         run: |
