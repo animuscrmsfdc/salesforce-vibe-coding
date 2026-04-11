@@ -25,9 +25,7 @@ jobs:
 
       - name: Authenticate to dev org via SFDX Auth URL
         run: |
-          echo "${{ secrets.SFDX_AUTH_URL }}" > ./auth-url.txt
-          sf org login sfdx-url --sfdx-url-file ./auth-url.txt --alias dev-org --set-default
-          rm ./auth-url.txt
+          echo "${{ secrets.SFDX_AUTH_URL }}" | sf org login sfdx-url --sfdx-url-file - --alias dev-org --set-default
 
       - name: Deploy to dev org (RunLocalTests)
         run: |
@@ -40,6 +38,17 @@ jobs:
 
       - name: Verify deploy status
         run: sf project deploy report --use-most-recent --json
+
+      - name: Apply destructive changes
+        if: success()
+        run: |
+          sf project deploy start \
+            --manifest manifest/package-empty.xml \
+            --post-destructive-changes manifest/destructiveChanges.xml \
+            --target-org dev-org \
+            --test-level RunLocalTests \
+            --wait 30 \
+            --json
 
       - name: Notify on failure
         if: failure()

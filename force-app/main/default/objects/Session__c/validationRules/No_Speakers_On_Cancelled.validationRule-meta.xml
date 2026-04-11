@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>No_Speakers_On_Cancelled</fullName>
+    <active>true</active>
+    <description>Prevents a session from being cancelled while it still has speaker assignments. Uses the Speaker_Count__c roll-up summary field.</description>
+    <errorConditionFormula>ISPICKVAL(Status__c, 'Cancelled') &amp;&amp; Speaker_Count__c &gt; 0</errorConditionFormula>
+    <errorMessage>Cannot cancel a session that still has speaker assignments. Remove all speakers first.</errorMessage>
+</ValidationRule>
