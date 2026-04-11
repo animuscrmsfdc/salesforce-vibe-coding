@@ -49,7 +49,6 @@ public with sharing class SessionSpeakerTriggerHandler {
             FROM Session_Speaker__c
             WHERE Speaker__c IN :speakerIds
               AND Session__r.Status__c != 'Cancelled'
-            FOR UPDATE
         ];
 
         // Build overlap map: speakerId -> (existingAssignmentId -> [start, end])
