@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <!-- Removes the legacy Platform_Usages__e platform event replaced by Platform_Event__e.
+         Removes TestRejectDoubleBooking Apex class renamed to SessionSpeakerTriggerHandlerTest.
          Deploy with: sf project deploy start --manifest manifest/package-empty.xml
                                               --post-destructive-changes manifest/destructiveChanges.xml
                                               --target-org dev-org -->
+    <types>
+        <members>TestRejectDoubleBooking</members>
+        <name>ApexClass</name>
+    </types>
     <types>
         <members>Platform_Usages__e</members>
         <name>CustomObject</name>

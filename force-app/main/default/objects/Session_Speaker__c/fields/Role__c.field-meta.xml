@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Role__c</fullName>
+    <description>The speaker's role in the session (e.g. Keynote, Panelist, Moderator).</description>
+    <externalId>false</externalId>
+    <label>Role</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Keynote</fullName>
+                <default>false</default>
+                <label>Keynote</label>
+            </value>
+            <value>
+                <fullName>Panelist</fullName>
+                <default>true</default>
+                <label>Panelist</label>
+            </value>
+            <value>
+                <fullName>Moderator</fullName>
+                <default>false</default>
+                <label>Moderator</label>
+            </value>
+            <value>
+                <fullName>Workshop Leader</fullName>
+                <default>false</default>
+                <label>Workshop Leader</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

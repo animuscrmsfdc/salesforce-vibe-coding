@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Confirmed__c</fullName>
+    <description>Indicates whether the speaker has confirmed their participation in the session.</description>
+    <defaultValue>false</defaultValue>
+    <externalId>false</externalId>
+    <label>Confirmed</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>
