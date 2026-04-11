@@ -17,7 +17,7 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>true</editable>
+        <editable>false</editable>
         <field>Session__c.Session_Date__c</field>
         <readable>true</readable>
     </fieldPermissions>
