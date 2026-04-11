@@ -37,8 +37,8 @@ private class SpeakerControllerExtensionTest {
         Speaker__c updated = [SELECT Picture_ContentDocument__c FROM Speaker__c WHERE Id = :speaker.Id];
         System.assertNotEquals(null, updated.Picture_ContentDocument__c, 'Picture_ContentDocument__c should be set after save with picture');
 
-        ContentDocument doc = [SELECT Id, Title FROM ContentDocument WHERE Id = :updated.Picture_ContentDocument__c];
-        System.assert(doc.Title.startsWith('Speaker_'), 'ContentDocument title should start with Speaker_');
+        ContentVersion cv = [SELECT Id, Title FROM ContentVersion WHERE Id = :updated.Picture_ContentDocument__c];
+        System.assert(cv.Title.startsWith('Speaker_'), 'ContentVersion title should start with Speaker_');
     }
 
     @IsTest

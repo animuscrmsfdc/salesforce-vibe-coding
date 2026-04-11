@@ -110,5 +110,5 @@
         <object>Speaker__c</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
-    <userLicense>Salesforce</userLicense>
+
 </PermissionSet>

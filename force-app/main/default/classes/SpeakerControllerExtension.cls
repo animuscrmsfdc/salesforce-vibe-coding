@@ -36,17 +36,9 @@ public with sharing class SpeakerControllerExtension {
                 }
                 insert toInsert;
 
-                ContentVersion inserted = [
-                    SELECT ContentDocumentId
-                    FROM ContentVersion
-                    WHERE Id = :toInsert.Id
-                    WITH SECURITY_ENFORCED
-                    LIMIT 1
-                ];
-
                 Speaker__c toUpdate = new Speaker__c(
                     Id = speaker.Id,
-                    Picture_ContentDocument__c = inserted.ContentDocumentId
+                    Picture_ContentDocument__c = toInsert.Id
                 );
                 SObjectAccessDecision updateDecision = Security.stripInaccessible(
                     AccessType.UPDATABLE,
