@@ -1,7 +1,4 @@
-ebody{
-    margin: 0;
-  }
-  .price {
-    color: green;
-    font-weight: bold;
-  }
+.price {
+  color: green;
+  font-weight: bold;
+}

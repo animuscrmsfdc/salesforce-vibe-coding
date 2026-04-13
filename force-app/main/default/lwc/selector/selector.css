@@ -1,11 +1,6 @@
-body {
-  margin: 0;
-} 
 .wrapper{
   min-height: 100vh;
   background: #ccc;
-  display: flex;
-  flex-direction: column;
 }
 .header, .footer{
   height: 50px;
@@ -15,27 +10,22 @@ body {
   padding: 10px;
 }
 .content {
-  display: flex;
   flex: 1;
   background: #999;
-  color: #000; 
+  color: #000;
 }
 .columns{
-  display: flex;
-  flex:1;
+  flex: 1;
 }
 .main{
   flex: 1;
-  order: 2;
   background: #eee;
 }
 .sidebar-first{
   width: 20%;
   background: #ccc;
-  order: 1;
 }
-.sidebar-second{ 
+.sidebar-second{
   width: 30%;
-  order: 3;
   background: #ddd;
 }

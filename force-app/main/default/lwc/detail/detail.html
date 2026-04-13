@@ -1,5 +1,5 @@
 <template>
-    <template if:true={product}>
+    <template lwc:if={product}>
         <div class="container">
             <div>{product.fields.Name.value}</div>
             <div class="price">{product.fields.MSRP__c.displayValue}</div>
@@ -14,7 +14,7 @@
             </p>
         </div>
     </template>
-    <template if:false={product}>
+    <template lwc:else>
         <div>Select a bike</div>
     </template>
 </template>
