@@ -1,15 +1,15 @@
 <template>
-    <div class="wrapper">
-    <header class="header">Available Bikes for {name}</header>
-    <section class="content">
-        <div class="columns">
-        <main class="main" >
-            <c-list onproductselected={handleProductSelected}></c-list>
-        </main>
-        <aside class="sidebar-second">
-            <c-detail product-id={selectedProductId}></c-detail>
-        </aside>
-        </div>
-    </section>
+    <div class="wrapper slds-grid slds-grid_vertical">
+        <header class="header">Available Bikes for {name}</header>
+        <section class="content slds-grid">
+            <div class="columns slds-grid">
+                <main class="main slds-order_2">
+                    <c-list onproductselected={handleProductSelected}></c-list>
+                </main>
+                <aside class="sidebar-second slds-order_3">
+                    <c-detail product-id={selectedProductId}></c-detail>
+                </aside>
+            </div>
+        </section>
     </div>
 </template>

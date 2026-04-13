@@ -1,4 +1,4 @@
-import { LightningElement, api, track } from 'lwc';
+import { LightningElement, api } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 
 const actions = [
@@ -17,14 +17,8 @@ const columns = [
 export default class Lwc_for_flows extends NavigationMixin(LightningElement) {
 
     @api contacts;
-    @track columns = columns;
+    columns = columns;
    
-    connectedCallback() {
-
-        console.log( 'Contacts are ' + JSON.stringify( this.contacts ) );
-       
-    }
-
     handleRowAction( event ) {
 
         const row = event.detail.row;

@@ -1,6 +1,6 @@
 <template>
     <lightning-card>
-        <template if:true={contacts.data}>
+        <template lwc:if={contacts.data}>
             <lightning-datatable
                 key-field="Id"
                 data={contacts.data}
@@ -8,7 +8,7 @@
             >
            </lightning-datatable>
         </template>
-        <template if:true={errors}>
+        <template lwc:if={errors}>
             <p>{errors}</p>
         </template>
     </lightning-card>

@@ -30,7 +30,7 @@ export default class BearList extends NavigationMixin(LightningElement) {
 		}, 300);
 	}
 	get hasResults() {
-		return (this.bears.data.length > 0);
+		return (this.bears.data?.length ?? 0) > 0;
 	}
 	handleBearView(event) {
 		// Get bear record id from bearview event

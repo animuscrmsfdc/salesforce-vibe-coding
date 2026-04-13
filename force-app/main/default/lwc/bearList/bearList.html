@@ -2,7 +2,7 @@
 	<lightning-card title="Bears" icon-name="utility:animal_and_nature">
 		<div class="slds-card__body_inner">
 			<!-- Start bear list -->
-			<template if:true={bears.data}>
+			<template lwc:if={bears.data}>
 				<lightning-input type="search"
 					onchange={handleSearchTermChange}
 					variant="label-hidden"
@@ -19,7 +19,7 @@
 					</template>
 				</lightning-layout>
 				<!-- No bears found -->
-				<template if:false={hasResults}>
+				<template lwc:unless={hasResults}>
 					<div class="slds-align_absolute-center slds-var-m-vertical_small">
 						This is beary disturbing, we did not find results...
 					</div>
@@ -27,7 +27,7 @@
 			</template>
 			<!-- End bear list -->
 			<!-- Data failed to load -->
-			<template if:true={bears.error}>
+			<template lwc:elseif={bears.error}>
 				<div class="slds-text-color_error">
 					An error occurred while loading the bear list
 				</div>
