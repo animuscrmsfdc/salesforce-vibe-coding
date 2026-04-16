@@ -1,0 +1,543 @@
+<template>
+    <div class="ssm-wrapper">
+
+        <!-- ═══ HEADER ════════════════════════════════════════════════════════ -->
+        <div class="ssm-header">
+            <div class="ssm-header-content">
+                <lightning-icon icon-name="standard:event" size="medium" class="ssm-header-icon"></lightning-icon>
+                <div>
+                    <h1 class="ssm-title">Session &amp; Speaker Manager</h1>
+                    <p class="ssm-subtitle">Configure sessions and assign speakers in one place</p>
+                </div>
+            </div>
+            <div class="ssm-steps">
+                <div class={stepPill1Class}>
+                    <span class="ssm-step-num">1</span>
+                    <span class="ssm-step-label">Session</span>
+                </div>
+                <div class="ssm-step-connector"></div>
+                <div class={stepPill2Class}>
+                    <span class="ssm-step-num">2</span>
+                    <span class="ssm-step-label">Speakers</span>
+                </div>
+                <div class="ssm-step-connector"></div>
+                <div class={stepPill3Class}>
+                    <span class="ssm-step-num">3</span>
+                    <span class="ssm-step-label">Review</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ STEP 1: SESSION ═══════════════════════════════════════════════ -->
+        <template if:true={isStep1}>
+            <div class="ssm-body">
+                <h2 class="ssm-section-title">Find or Create a Session</h2>
+
+                <div class="ssm-search-wrap">
+                    <lightning-icon icon-name="utility:search" size="x-small" class="ssm-search-icon"></lightning-icon>
+                    <lightning-input
+                        type="search"
+                        label="Search Sessions"
+                        variant="label-hidden"
+                        placeholder="Search by name or description..."
+                        value={sessionSearchTerm}
+                        onchange={handleSessionSearchChange}
+                        class="ssm-search-input">
+                    </lightning-input>
+                </div>
+
+                <template if:false={hasSearched}>
+                    <div class="ssm-empty-state">
+                        <lightning-icon icon-name="utility:search" size="small"></lightning-icon>
+                        <p>Type at least 3 characters to search for sessions, or create a new one below.</p>
+                    </div>
+                </template>
+
+                <template if:true={sessions.data}>
+                    <template if:true={hasSessions}>
+                        <div class="ssm-results-grid">
+                            <template for:each={sessions.data} for:item="session">
+                                <div key={session.Id}
+                                     class={session.cardClass}
+                                     data-id={session.Id}
+                                     onclick={handleSessionSelect}>
+                                    <div class="ssm-card-header">
+                                        <span class="ssm-card-name">{session.Name}</span>
+                                        <span class={session.statusBadgeClass}>{session.Status__c}</span>
+                                    </div>
+                                    <div class="ssm-card-meta">
+                                        <lightning-icon icon-name="utility:event" size="xx-small"></lightning-icon>
+                                        <span class="ssm-card-date">{session.formattedDate}</span>
+                                        <template if:true={session.Level__c}>
+                                            <span class="ssm-badge ssm-badge--level">{session.Level__c}</span>
+                                        </template>
+                                    </div>
+                                    <div class="ssm-card-footer">
+                                        <lightning-icon icon-name="utility:people" size="xx-small"></lightning-icon>
+                                        <span class="ssm-speaker-count">{session.Speaker_Count__c} speaker(s)</span>
+                                        <template if:true={session.isSelected}>
+                                            <lightning-icon icon-name="utility:check" size="xx-small" class="ssm-selected-check"></lightning-icon>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template if:false={hasSessions}>
+                        <div class="ssm-empty-state">
+                            <lightning-icon icon-name="utility:info" size="small"></lightning-icon>
+                            <p>No results found yet. Try a different search or create one below.</p>
+                        </div>
+                    </template>
+                </template>
+                <template if:true={sessions.error}>
+                    <div class="ssm-error-state">
+                        <p>Failed to load sessions. Please try again.</p>
+                    </div>
+                </template>
+
+                <div class="ssm-create-toggle" onclick={toggleNewSession}>
+                    <lightning-icon icon-name={newSessionToggleIcon} size="x-small"></lightning-icon>
+                    <span>Create New Session</span>
+                </div>
+
+                <template if:true={showNewSession}>
+                    <div class="ssm-create-form">
+                        <h3 class="ssm-form-title">New Session Details</h3>
+                        <div class="slds-grid slds-wrap slds-gutters">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                <lightning-input
+                                    type="datetime"
+                                    label="Session Date *"
+                                    name="Session_Date__c"
+                                    value={newSession.Session_Date__c}
+                                    onchange={handleNewSessionFieldChange}
+                                    required>
+                                </lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                <lightning-input
+                                    type="datetime"
+                                    label="End Date"
+                                    name="End_Date__c"
+                                    value={newSession.End_Date__c}
+                                    onchange={handleNewSessionFieldChange}>
+                                </lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                <lightning-combobox
+                                    label="Status"
+                                    name="Status__c"
+                                    value={newSession.Status__c}
+                                    options={statusOptions}
+                                    onchange={handleNewSessionFieldChange}>
+                                </lightning-combobox>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                <lightning-combobox
+                                    label="Level"
+                                    name="Level__c"
+                                    value={newSession.Level__c}
+                                    options={levelOptions}
+                                    onchange={handleNewSessionFieldChange}>
+                                </lightning-combobox>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1">
+                                <lightning-textarea
+                                    label="Description"
+                                    name="Description__c"
+                                    value={newSession.Description__c}
+                                    onchange={handleNewSessionFieldChange}
+                                    max-length="32000">
+                                </lightning-textarea>
+                            </div>
+                        </div>
+                        <div class="ssm-form-actions">
+                            <lightning-button
+                                label="Cancel"
+                                onclick={toggleNewSession}
+                                class="slds-var-m-right_small">
+                            </lightning-button>
+                            <lightning-button
+                                variant="brand"
+                                label="Save &amp; Select Session"
+                                onclick={handleSaveNewSession}
+                                disabled={isSaving}>
+                            </lightning-button>
+                        </div>
+                    </div>
+                </template>
+
+                <div class="ssm-nav-bar">
+                    <div></div>
+                    <lightning-button
+                        variant="brand"
+                        label="Next: Add Speakers"
+                        icon-name="utility:forward"
+                        icon-position="right"
+                        onclick={goToStep2}
+                        disabled={noSessionSelected}>
+                    </lightning-button>
+                </div>
+            </div>
+        </template>
+
+        <!-- ═══ STEP 2: SPEAKERS ══════════════════════════════════════════════ -->
+        <template if:true={isStep2}>
+            <div class="ssm-body">
+
+                <div class="ssm-session-banner">
+                    <div class="ssm-banner-left">
+                        <lightning-icon icon-name="standard:event" size="small"></lightning-icon>
+                        <div>
+                            <div class="ssm-banner-name">{selectedSession.Name}</div>
+                            <div class="ssm-banner-meta">
+                                {selectedSession.formattedDate}
+                                <template if:true={selectedSession.Level__c}>
+                                    &nbsp;·&nbsp;{selectedSession.Level__c}
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    <span class={selectedSession.statusBadgeClass}>{selectedSession.Status__c}</span>
+                </div>
+
+                <template if:true={hasAssignedSpeakers}>
+                    <div class="slds-grid slds-wrap slds-grid_vertical-align-center ssm-speaker-summary">
+                        <lightning-icon icon-name="utility:people" size="xx-small" class="slds-shrink-none"></lightning-icon>
+                        <span class="ssm-speaker-summary-label slds-var-m-left_x-small">Already assigned:</span>
+                        <template for:each={sessionSpeakers.data} for:item="ss">
+                            <span key={ss.Id} class="ssm-speaker-summary-chip slds-var-m-left_x-small">
+                                {ss.Speaker__r.First_Name__c} {ss.Speaker__r.Last_Name__c}
+                            </span>
+                        </template>
+                    </div>
+                </template>
+
+                <template if:true={isSessionCancelled}>
+                    <div class="ssm-alert ssm-alert--warning">
+                        <lightning-icon icon-name="utility:warning" size="x-small"></lightning-icon>
+                        <span>This session is Cancelled. Speaker assignments are disabled.</span>
+                    </div>
+                </template>
+
+                <div class="ssm-speakers-header">
+                    <h2 class="ssm-section-title">Assigned Speakers</h2>
+                    <template if:false={isSessionCancelled}>
+                        <lightning-button
+                            variant="brand"
+                            label="Add Speaker"
+                            icon-name="utility:add"
+                            onclick={openAddSpeakerPanel}>
+                        </lightning-button>
+                    </template>
+                </div>
+
+                <template if:true={sessionSpeakers.data}>
+                    <template if:true={hasAssignedSpeakers}>
+                        <div class="ssm-speakers-grid">
+                            <template for:each={sessionSpeakers.data} for:item="ss">
+                                <div key={ss.Id} class="ssm-speaker-card">
+                                    <button
+                                        class="ssm-remove-btn"
+                                        data-id={ss.Id}
+                                        onclick={handleRemoveSpeaker}
+                                        title="Remove speaker"
+                                        aria-label="Remove speaker">
+                                        ×
+                                    </button>
+                                    <div class="ssm-avatar" style={ss.avatarStyle}>
+                                        {ss.initials}
+                                    </div>
+                                    <div class="ssm-speaker-name">{ss.Speaker__r.First_Name__c} {ss.Speaker__r.Last_Name__c}</div>
+                                    <div class="ssm-speaker-email">{ss.Speaker__r.Email__c}</div>
+                                    <template if:true={ss.Role__c}>
+                                        <span class="ssm-badge ssm-badge--role">{ss.Role__c}</span>
+                                    </template>
+                                    <div class="ssm-speaker-confirmed">
+                                        <lightning-input
+                                            type="checkbox"
+                                            label="Confirmed"
+                                            checked={ss.Confirmed__c}
+                                            data-id={ss.Id}
+                                            onchange={handleConfirmedToggle}>
+                                        </lightning-input>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template if:false={hasAssignedSpeakers}>
+                        <div class="ssm-empty-state">
+                            <lightning-icon icon-name="utility:people" size="small"></lightning-icon>
+                            <p>No speakers assigned yet. Click &quot;Add Speaker&quot; to get started.</p>
+                        </div>
+                    </template>
+                </template>
+
+                <!-- Add Speaker Overlay Panel -->
+                <template if:true={showAddSpeakerPanel}>
+                    <div class="ssm-overlay-backdrop" onclick={closeAddSpeakerPanel}></div>
+                    <div class="ssm-overlay-panel">
+                        <div class="ssm-overlay-header">
+                            <h2 class="ssm-overlay-title">Add Speaker to Session</h2>
+                            <button class="ssm-close-btn" onclick={closeAddSpeakerPanel} title="Close panel" aria-label="Close panel">×</button>
+                        </div>
+                        <div class="ssm-overlay-body">
+
+                            <template if:false={pendingSpeaker}>
+                                <div class="ssm-search-wrap">
+                                    <lightning-icon icon-name="utility:search" size="x-small" class="ssm-search-icon"></lightning-icon>
+                                    <lightning-input
+                                        type="search"
+                                        label="Search Speakers"
+                                        variant="label-hidden"
+                                        placeholder="Search by name or email..."
+                                        value={speakerSearchTerm}
+                                        onchange={handleSpeakerSearchChange}
+                                        class="ssm-search-input">
+                                    </lightning-input>
+                                </div>
+
+                                <template if:true={speakers.data}>
+                                    <template if:true={hasSpeakers}>
+                                        <div class="ssm-speaker-results">
+                                            <template for:each={speakers.data} for:item="spk">
+                                                <div key={spk.Id}
+                                                     class="ssm-speaker-result-row"
+                                                     data-id={spk.Id}
+                                                     data-firstname={spk.First_Name__c}
+                                                     data-lastname={spk.Last_Name__c}
+                                                     data-email={spk.Email__c}
+                                                     onclick={handleSpeakerPick}>
+                                                    <div class="ssm-avatar ssm-avatar--sm" style={spk.avatarStyle}>
+                                                        {spk.initials}
+                                                    </div>
+                                                    <div>
+                                                        <div class="ssm-result-name">{spk.First_Name__c} {spk.Last_Name__c}</div>
+                                                        <div class="ssm-result-email">{spk.Email__c}</div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template if:false={hasSpeakers}>
+                                        <div class="ssm-empty-state ssm-empty-state--sm">
+                                            <p>No results found yet.</p>
+                                        </div>
+                                    </template>
+                                </template>
+
+                                <div class="ssm-create-toggle" onclick={toggleNewSpeaker}>
+                                    <lightning-icon icon-name={newSpeakerToggleIcon} size="x-small"></lightning-icon>
+                                    <span>Create New Speaker</span>
+                                </div>
+
+                                <template if:true={showNewSpeaker}>
+                                    <div class="ssm-create-form ssm-create-form--inline">
+                                        <div class="slds-grid slds-wrap slds-gutters">
+                                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                                <lightning-input
+                                                    label="First Name"
+                                                    name="First_Name__c"
+                                                    value={newSpeaker.First_Name__c}
+                                                    onchange={handleNewSpeakerFieldChange}>
+                                                </lightning-input>
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                                <lightning-input
+                                                    label="Last Name *"
+                                                    name="Last_Name__c"
+                                                    value={newSpeaker.Last_Name__c}
+                                                    onchange={handleNewSpeakerFieldChange}
+                                                    required>
+                                                </lightning-input>
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-1">
+                                                <lightning-input
+                                                    type="email"
+                                                    label="Email"
+                                                    name="Email__c"
+                                                    value={newSpeaker.Email__c}
+                                                    onchange={handleNewSpeakerFieldChange}>
+                                                </lightning-input>
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-1">
+                                                <lightning-textarea
+                                                    label="Bio"
+                                                    name="Bio__c"
+                                                    value={newSpeaker.Bio__c}
+                                                    onchange={handleNewSpeakerFieldChange}
+                                                    max-length="32000">
+                                                </lightning-textarea>
+                                            </div>
+                                        </div>
+                                        <div class="ssm-form-actions">
+                                            <lightning-button
+                                                variant="brand"
+                                                label="Save &amp; Select Speaker"
+                                                onclick={handleSaveNewSpeaker}
+                                                disabled={isSaving}>
+                                            </lightning-button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+
+                            <!-- Assignment config after speaker picked -->
+                            <template if:true={pendingSpeaker}>
+                                <div class="ssm-pending-speaker">
+                                    <div class="ssm-pending-header">
+                                        <div class="ssm-avatar" style={pendingSpeaker.avatarStyle}>
+                                            {pendingSpeaker.initials}
+                                        </div>
+                                        <div>
+                                            <div class="ssm-speaker-name">{pendingSpeaker.fullName}</div>
+                                            <div class="ssm-speaker-email">{pendingSpeaker.Email__c}</div>
+                                        </div>
+                                        <button class="ssm-link-btn" onclick={clearPendingSpeaker}>Change</button>
+                                    </div>
+                                    <div class="slds-grid slds-wrap slds-gutters slds-var-m-top_medium">
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                            <lightning-combobox
+                                                label="Role"
+                                                value={pendingAssignment.Role__c}
+                                                options={roleOptions}
+                                                onchange={handleAssignmentRoleChange}>
+                                            </lightning-combobox>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                                            <lightning-input
+                                                type="number"
+                                                label="Order"
+                                                value={pendingAssignment.Order__c}
+                                                min="1"
+                                                max="999"
+                                                onchange={handleAssignmentOrderChange}>
+                                            </lightning-input>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1">
+                                            <lightning-input
+                                                type="checkbox"
+                                                label="Confirmed"
+                                                checked={pendingAssignment.Confirmed__c}
+                                                onchange={handleAssignmentConfirmedChange}>
+                                            </lightning-input>
+                                        </div>
+                                    </div>
+                                    <div class="ssm-form-actions">
+                                        <lightning-button
+                                            label="Cancel"
+                                            onclick={closeAddSpeakerPanel}>
+                                        </lightning-button>
+                                        <lightning-button
+                                            variant="brand"
+                                            label="Add to Session"
+                                            icon-name="utility:add"
+                                            onclick={handleAddSpeakerToSession}
+                                            disabled={isSaving}>
+                                        </lightning-button>
+                                    </div>
+                                </div>
+                            </template>
+
+                        </div>
+                    </div>
+                </template>
+
+                <div class="ssm-nav-bar">
+                    <lightning-button
+                        label="Back"
+                        icon-name="utility:back"
+                        onclick={goToStep1}>
+                    </lightning-button>
+                    <lightning-button
+                        variant="brand"
+                        label="Next: Review"
+                        icon-name="utility:forward"
+                        icon-position="right"
+                        onclick={goToStep3}>
+                    </lightning-button>
+                </div>
+            </div>
+        </template>
+
+        <!-- ═══ STEP 3: REVIEW ════════════════════════════════════════════════ -->
+        <template if:true={isStep3}>
+            <div class="ssm-body">
+                <h2 class="ssm-section-title">Review &amp; Confirm</h2>
+
+                <div class="ssm-review-session-card">
+                    <div class="ssm-review-card-header">
+                        <lightning-icon icon-name="standard:event" size="small"></lightning-icon>
+                        <div class="ssm-review-session-info">
+                            <div class="ssm-review-session-name">{selectedSession.Name}</div>
+                            <div class="ssm-review-session-meta">
+                                {selectedSession.formattedDate}
+                                <template if:true={selectedSession.Level__c}>
+                                    &nbsp;·&nbsp;{selectedSession.Level__c}
+                                </template>
+                            </div>
+                        </div>
+                        <span class={selectedSession.statusBadgeClass}>{selectedSession.Status__c}</span>
+                    </div>
+                    <template if:true={selectedSession.Description__c}>
+                        <div class="ssm-review-description">{selectedSession.Description__c}</div>
+                    </template>
+                    <div class="ssm-review-speaker-count">
+                        <lightning-icon icon-name="utility:people" size="xx-small"></lightning-icon>
+                        {reviewSpeakerCount} speaker(s) assigned
+                    </div>
+                </div>
+
+                <template if:true={hasAssignedSpeakers}>
+                    <div class="ssm-review-speakers">
+                        <template for:each={sessionSpeakers.data} for:item="ss">
+                            <div key={ss.Id} class="ssm-review-speaker-row">
+                                <div class="ssm-avatar ssm-avatar--sm" style={ss.avatarStyle}>
+                                    {ss.initials}
+                                </div>
+                                <div class="ssm-review-speaker-info">
+                                    <div class="ssm-speaker-name">{ss.Speaker__r.First_Name__c} {ss.Speaker__r.Last_Name__c}</div>
+                                    <div class="ssm-speaker-email">{ss.Speaker__r.Email__c}</div>
+                                </div>
+                                <div class="ssm-review-speaker-meta">
+                                    <template if:true={ss.Role__c}>
+                                        <span class="ssm-badge ssm-badge--role">{ss.Role__c}</span>
+                                    </template>
+                                    <template if:true={ss.Confirmed__c}>
+                                        <span class="ssm-badge ssm-badge--confirmed">Confirmed</span>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <div class="ssm-review-actions">
+                    <lightning-button
+                        variant="brand"
+                        label="Go to Session Record"
+                        icon-name="utility:new_window"
+                        onclick={navigateToSession}>
+                    </lightning-button>
+                    <lightning-button
+                        label="Start Over"
+                        icon-name="utility:refresh"
+                        onclick={handleReset}>
+                    </lightning-button>
+                </div>
+
+                <div class="ssm-nav-bar">
+                    <lightning-button
+                        label="Back"
+                        icon-name="utility:back"
+                        onclick={goToStep2}>
+                    </lightning-button>
+                    <div></div>
+                </div>
+            </div>
+        </template>
+
+    </div>
+</template>
