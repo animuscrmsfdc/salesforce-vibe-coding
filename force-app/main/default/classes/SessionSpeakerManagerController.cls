@@ -59,7 +59,7 @@ public with sharing class SessionSpeakerManagerController {
     @AuraEnabled(Cacheable=true)
     public static List<Session_Speaker__c> getSessionSpeakers(Id sessionId) {
         if (sessionId == null) return new List<Session_Speaker__c>();
-        return [
+        List<Session_Speaker__c> results = [
             SELECT Id,
                    Session__c,
                    Speaker__c,
@@ -72,9 +72,9 @@ public with sharing class SessionSpeakerManagerController {
                    Confirmed__c
             FROM Session_Speaker__c
             WHERE Session__c = :sessionId
-            WITH SECURITY_ENFORCED
             ORDER BY Order__c NULLS LAST, Speaker__r.Last_Name__c
         ];
+        return (List<Session_Speaker__c>) Security.stripInaccessible(AccessType.READABLE, results).getRecords();
     }
 
     // ─── Get Session Speakers (non-cacheable, for imperative bootstrap) ──────
@@ -82,7 +82,7 @@ public with sharing class SessionSpeakerManagerController {
     @AuraEnabled
     public static List<Session_Speaker__c> getSessionSpeakersLive(Id sessionId) {
         if (sessionId == null) return new List<Session_Speaker__c>();
-        return [
+        List<Session_Speaker__c> results = [
             SELECT Id,
                    Session__c,
                    Speaker__c,
@@ -95,9 +95,9 @@ public with sharing class SessionSpeakerManagerController {
                    Confirmed__c
             FROM Session_Speaker__c
             WHERE Session__c = :sessionId
-            WITH SECURITY_ENFORCED
             ORDER BY Order__c NULLS LAST, Speaker__r.Last_Name__c
         ];
+        return (List<Session_Speaker__c>) Security.stripInaccessible(AccessType.READABLE, results).getRecords();
     }
 
     // ─── Save Session ────────────────────────────────────────────────────────
@@ -110,13 +110,13 @@ public with sharing class SessionSpeakerManagerController {
         );
         Session__c clean = (Session__c) decision.getRecords()[0];
         upsert clean;
-        return [
+        List<Session__c> saved = [
             SELECT Id, Name, Session_Date__c, End_Date__c,
                    Status__c, Level__c, Description__c, Speaker_Count__c
             FROM Session__c
             WHERE Id = :clean.Id
-            WITH SECURITY_ENFORCED
         ];
+        return (Session__c) Security.stripInaccessible(AccessType.READABLE, saved).getRecords()[0];
     }
 
     // ─── Save Speaker ────────────────────────────────────────────────────────
@@ -129,12 +129,12 @@ public with sharing class SessionSpeakerManagerController {
         );
         Speaker__c clean = (Speaker__c) decision.getRecords()[0];
         upsert clean;
-        return [
+        List<Speaker__c> saved = [
             SELECT Id, Name, First_Name__c, Last_Name__c, Email__c, Bio__c
             FROM Speaker__c
             WHERE Id = :clean.Id
-            WITH SECURITY_ENFORCED
         ];
+        return (Speaker__c) Security.stripInaccessible(AccessType.READABLE, saved).getRecords()[0];
     }
 
     // ─── Save Session Speaker (Junction) ────────────────────────────────────
