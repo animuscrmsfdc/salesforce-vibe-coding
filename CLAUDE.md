@@ -22,8 +22,10 @@
 - Label and API name must match (no abbreviations)
 
 ## Apex Coding Standards
-- All SOQL in @AuraEnabled/Wire methods must use `WITH SECURITY_ENFORCED`
-- Always call `Security.stripInaccessible()` or `WITH SECURITY_ENFORCED` in @AuraEnabled methods
+- Never use `WITH SECURITY_ENFORCED` on queries that include cross-object relationship fields (e.g. `Speaker__r.Name`) or as post-upsert return queries — use `Security.stripInaccessible(AccessType.READABLE, results).getRecords()` instead; it strips inaccessible fields gracefully rather than throwing
+- `WITH SECURITY_ENFORCED` is safe only for simple single-object queries with no relationship traversal (e.g. `SELECT Id, Name FROM Session__c`)
+- Never use `AccessType.UPSERTABLE` with `stripInaccessible` on junction objects that have master-detail fields — master-detail fields are creatable but not updatable, so UPSERTABLE strips them and causes DML failures; use `ss.Id == null ? AccessType.CREATABLE : AccessType.UPDATABLE` instead
+- Always call `Security.stripInaccessible()` in @AuraEnabled write methods (insert/update/upsert)
 - Triggers: one trigger per object, delegate logic to a handler class
 - Bulkify all trigger and batch logic
 
