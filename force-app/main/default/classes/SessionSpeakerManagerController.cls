@@ -140,7 +140,7 @@ public with sharing class SessionSpeakerManagerController {
     // ─── Save Session Speaker (Junction) ────────────────────────────────────
 
     @AuraEnabled
-    public static Session_Speaker__c saveSessionSpeaker(Session_Speaker__c ss) {
+    public static void saveSessionSpeaker(Session_Speaker__c ss) {
         // Master-detail fields (Session__c, Speaker__c) are creatable but not updatable,
         // so UPSERTABLE strips them. Use CREATABLE for inserts, UPDATABLE for updates.
         AccessType accessType = ss.Id == null ? AccessType.CREATABLE : AccessType.UPDATABLE;
@@ -150,15 +150,6 @@ public with sharing class SessionSpeakerManagerController {
         );
         Session_Speaker__c clean = (Session_Speaker__c) decision.getRecords()[0];
         upsert clean;
-        return [
-            SELECT Id, Session__c, Speaker__c,
-                   Speaker__r.Name, Speaker__r.First_Name__c,
-                   Speaker__r.Last_Name__c, Speaker__r.Email__c,
-                   Role__c, Order__c, Confirmed__c
-            FROM Session_Speaker__c
-            WHERE Id = :clean.Id
-            WITH SECURITY_ENFORCED
-        ];
     }
 
     // ─── Remove Session Speaker ──────────────────────────────────────────────
