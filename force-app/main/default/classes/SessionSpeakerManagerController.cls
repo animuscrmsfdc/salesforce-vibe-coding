@@ -141,8 +141,11 @@ public with sharing class SessionSpeakerManagerController {
 
     @AuraEnabled
     public static Session_Speaker__c saveSessionSpeaker(Session_Speaker__c ss) {
+        // Master-detail fields (Session__c, Speaker__c) are creatable but not updatable,
+        // so UPSERTABLE strips them. Use CREATABLE for inserts, UPDATABLE for updates.
+        AccessType accessType = ss.Id == null ? AccessType.CREATABLE : AccessType.UPDATABLE;
         SObjectAccessDecision decision = Security.stripInaccessible(
-            AccessType.UPSERTABLE,
+            accessType,
             new List<Session_Speaker__c>{ ss }
         );
         Session_Speaker__c clean = (Session_Speaker__c) decision.getRecords()[0];

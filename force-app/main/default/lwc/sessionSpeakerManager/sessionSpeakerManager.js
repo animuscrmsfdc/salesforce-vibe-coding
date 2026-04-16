@@ -499,12 +499,24 @@ export default class SessionSpeakerManager extends NavigationMixin(LightningElem
     }
 
     _errorMessage(error) {
-        if (error && error.body && error.body.message) return error.body.message;
-        if (error && error.body && error.body.fieldErrors) {
-            const flat = Object.values(error.body.fieldErrors).flat();
-            if (flat.length > 0) return flat[0].message;
+        if (!error) return 'An unexpected error occurred.';
+        if (error.body) {
+            if (error.body.message) return error.body.message;
+            if (error.body.output) {
+                const errs = error.body.output.errors;
+                if (errs && errs.length > 0) return errs[0].message;
+                const fieldErrs = error.body.output.fieldErrors;
+                if (fieldErrs) {
+                    const flat = Object.values(fieldErrs).flat();
+                    if (flat.length > 0) return flat[0].message;
+                }
+            }
+            if (error.body.fieldErrors) {
+                const flat = Object.values(error.body.fieldErrors).flat();
+                if (flat.length > 0) return flat[0].message;
+            }
         }
-        if (error && error.message) return error.message;
+        if (error.message) return error.message;
         return 'An unexpected error occurred.';
     }
 }
