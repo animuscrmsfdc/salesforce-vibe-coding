@@ -60,7 +60,10 @@
                                 <div key={session.Id}
                                      class={session.cardClass}
                                      data-id={session.Id}
-                                     onclick={handleSessionSelect}>
+                                     role="button"
+                                     tabindex="0"
+                                     onclick={handleSessionSelect}
+                                     onkeydown={handleSessionCardKeydown}>
                                     <div class="ssm-card-header">
                                         <span class="ssm-card-name">{session.Name}</span>
                                         <span class={session.statusBadgeClass}>{session.Status__c}</span>
@@ -96,15 +99,24 @@
                     </div>
                 </template>
 
-                <div class="ssm-create-toggle" onclick={toggleNewSession}>
+                <button type="button" class="ssm-create-toggle" onclick={toggleNewSession}>
                     <lightning-icon icon-name={newSessionToggleIcon} size="x-small"></lightning-icon>
                     <span>Create New Session</span>
-                </div>
+                </button>
 
                 <template if:true={showNewSession}>
                     <div class="ssm-create-form">
                         <h3 class="ssm-form-title">New Session Details</h3>
                         <div class="slds-grid slds-wrap slds-gutters">
+                            <div class="slds-col slds-size_1-of-1">
+                                <lightning-input
+                                    label="Session Name *"
+                                    name="Name"
+                                    value={newSession.Name}
+                                    onchange={handleNewSessionFieldChange}
+                                    required>
+                                </lightning-input>
+                            </div>
                             <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
                                 <lightning-input
                                     type="datetime"
@@ -243,7 +255,7 @@
                                         data-id={ss.Id}
                                         onclick={handleRemoveSpeaker}
                                         title="Remove speaker"
-                                        aria-label="Remove speaker">
+                                        aria-label={ss.removeAriaLabel}>
                                         ×
                                     </button>
                                     <div class="ssm-avatar" style={ss.avatarStyle}>
@@ -275,176 +287,6 @@
                     </template>
                 </template>
 
-                <!-- Add Speaker Overlay Panel -->
-                <template if:true={showAddSpeakerPanel}>
-                    <div class="ssm-overlay-backdrop" onclick={closeAddSpeakerPanel}></div>
-                    <div class="ssm-overlay-panel">
-                        <div class="ssm-overlay-header">
-                            <h2 class="ssm-overlay-title">Add Speaker to Session</h2>
-                            <button class="ssm-close-btn" onclick={closeAddSpeakerPanel} title="Close panel" aria-label="Close panel">×</button>
-                        </div>
-                        <div class="ssm-overlay-body">
-
-                            <template if:false={pendingSpeaker}>
-                                <div class="ssm-search-wrap">
-                                    <lightning-icon icon-name="utility:search" size="x-small" class="ssm-search-icon"></lightning-icon>
-                                    <lightning-input
-                                        type="search"
-                                        label="Search Speakers"
-                                        variant="label-hidden"
-                                        placeholder="Search by name or email..."
-                                        value={speakerSearchTerm}
-                                        onchange={handleSpeakerSearchChange}
-                                        class="ssm-search-input">
-                                    </lightning-input>
-                                </div>
-
-                                <template if:true={speakers.data}>
-                                    <template if:true={hasSpeakers}>
-                                        <div class="ssm-speaker-results">
-                                            <template for:each={speakers.data} for:item="spk">
-                                                <div key={spk.Id}
-                                                     class="ssm-speaker-result-row"
-                                                     data-id={spk.Id}
-                                                     data-firstname={spk.First_Name__c}
-                                                     data-lastname={spk.Last_Name__c}
-                                                     data-email={spk.Email__c}
-                                                     onclick={handleSpeakerPick}>
-                                                    <div class="ssm-avatar ssm-avatar--sm" style={spk.avatarStyle}>
-                                                        {spk.initials}
-                                                    </div>
-                                                    <div>
-                                                        <div class="ssm-result-name">{spk.First_Name__c} {spk.Last_Name__c}</div>
-                                                        <div class="ssm-result-email">{spk.Email__c}</div>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </template>
-                                    <template if:false={hasSpeakers}>
-                                        <div class="ssm-empty-state ssm-empty-state--sm">
-                                            <p>No results found yet.</p>
-                                        </div>
-                                    </template>
-                                </template>
-
-                                <div class="ssm-create-toggle" onclick={toggleNewSpeaker}>
-                                    <lightning-icon icon-name={newSpeakerToggleIcon} size="x-small"></lightning-icon>
-                                    <span>Create New Speaker</span>
-                                </div>
-
-                                <template if:true={showNewSpeaker}>
-                                    <div class="ssm-create-form ssm-create-form--inline">
-                                        <div class="slds-grid slds-wrap slds-gutters">
-                                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                                                <lightning-input
-                                                    label="First Name"
-                                                    name="First_Name__c"
-                                                    value={newSpeaker.First_Name__c}
-                                                    onchange={handleNewSpeakerFieldChange}>
-                                                </lightning-input>
-                                            </div>
-                                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                                                <lightning-input
-                                                    label="Last Name *"
-                                                    name="Last_Name__c"
-                                                    value={newSpeaker.Last_Name__c}
-                                                    onchange={handleNewSpeakerFieldChange}
-                                                    required>
-                                                </lightning-input>
-                                            </div>
-                                            <div class="slds-col slds-size_1-of-1">
-                                                <lightning-input
-                                                    type="email"
-                                                    label="Email"
-                                                    name="Email__c"
-                                                    value={newSpeaker.Email__c}
-                                                    onchange={handleNewSpeakerFieldChange}>
-                                                </lightning-input>
-                                            </div>
-                                            <div class="slds-col slds-size_1-of-1">
-                                                <lightning-textarea
-                                                    label="Bio"
-                                                    name="Bio__c"
-                                                    value={newSpeaker.Bio__c}
-                                                    onchange={handleNewSpeakerFieldChange}
-                                                    max-length="32000">
-                                                </lightning-textarea>
-                                            </div>
-                                        </div>
-                                        <div class="ssm-form-actions">
-                                            <lightning-button
-                                                variant="brand"
-                                                label="Save &amp; Select Speaker"
-                                                onclick={handleSaveNewSpeaker}
-                                                disabled={isSaving}>
-                                            </lightning-button>
-                                        </div>
-                                    </div>
-                                </template>
-                            </template>
-
-                            <!-- Assignment config after speaker picked -->
-                            <template if:true={pendingSpeaker}>
-                                <div class="ssm-pending-speaker">
-                                    <div class="ssm-pending-header">
-                                        <div class="ssm-avatar" style={pendingSpeaker.avatarStyle}>
-                                            {pendingSpeaker.initials}
-                                        </div>
-                                        <div>
-                                            <div class="ssm-speaker-name">{pendingSpeaker.fullName}</div>
-                                            <div class="ssm-speaker-email">{pendingSpeaker.Email__c}</div>
-                                        </div>
-                                        <button class="ssm-link-btn" onclick={clearPendingSpeaker}>Change</button>
-                                    </div>
-                                    <div class="slds-grid slds-wrap slds-gutters slds-var-m-top_medium">
-                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                                            <lightning-combobox
-                                                label="Role"
-                                                value={pendingAssignment.Role__c}
-                                                options={roleOptions}
-                                                onchange={handleAssignmentRoleChange}>
-                                            </lightning-combobox>
-                                        </div>
-                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
-                                            <lightning-input
-                                                type="number"
-                                                label="Order"
-                                                value={pendingAssignment.Order__c}
-                                                min="1"
-                                                max="999"
-                                                onchange={handleAssignmentOrderChange}>
-                                            </lightning-input>
-                                        </div>
-                                        <div class="slds-col slds-size_1-of-1">
-                                            <lightning-input
-                                                type="checkbox"
-                                                label="Confirmed"
-                                                checked={pendingAssignment.Confirmed__c}
-                                                onchange={handleAssignmentConfirmedChange}>
-                                            </lightning-input>
-                                        </div>
-                                    </div>
-                                    <div class="ssm-form-actions">
-                                        <lightning-button
-                                            label="Cancel"
-                                            onclick={closeAddSpeakerPanel}>
-                                        </lightning-button>
-                                        <lightning-button
-                                            variant="brand"
-                                            label="Add to Session"
-                                            icon-name="utility:add"
-                                            onclick={handleAddSpeakerToSession}
-                                            disabled={isSaving}>
-                                        </lightning-button>
-                                    </div>
-                                </div>
-                            </template>
-
-                        </div>
-                    </div>
-                </template>
-
                 <div class="ssm-nav-bar">
                     <lightning-button
                         label="Back"
@@ -468,9 +310,9 @@
                 <h2 class="ssm-section-title">Review &amp; Confirm</h2>
 
                 <div class="ssm-review-session-card">
-                    <div class="ssm-review-card-header">
+                    <div class="slds-grid slds-grid_vertical-align-start ssm-review-card-header">
                         <lightning-icon icon-name="standard:event" size="small"></lightning-icon>
-                        <div class="ssm-review-session-info">
+                        <div class="slds-col ssm-review-session-info">
                             <div class="ssm-review-session-name">{selectedSession.Name}</div>
                             <div class="ssm-review-session-meta">
                                 {selectedSession.formattedDate}

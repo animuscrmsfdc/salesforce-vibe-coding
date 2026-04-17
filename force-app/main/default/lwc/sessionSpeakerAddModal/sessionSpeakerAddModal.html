@@ -1,0 +1,164 @@
+<template>
+    <lightning-modal-header label="Add Speaker to Session">
+    </lightning-modal-header>
+
+    <lightning-modal-body>
+
+        <!-- ── Speaker Search ──────────────────────────────────────────── -->
+        <template if:false={pendingSpeaker}>
+            <div class="ssm-search-wrap">
+                <lightning-input
+                    type="search"
+                    label="Search Speakers"
+                    variant="label-hidden"
+                    placeholder="Search by name or email..."
+                    onchange={handleSpeakerSearchChange}
+                    class="ssm-search-input">
+                </lightning-input>
+            </div>
+
+            <template if:true={speakers.data}>
+                <template if:true={hasSpeakers}>
+                    <div class="ssm-speaker-results">
+                        <template for:each={speakers.data} for:item="spk">
+                            <div key={spk.Id}
+                                 class="ssm-speaker-result-row"
+                                 data-id={spk.Id}
+                                 role="button"
+                                 tabindex="0"
+                                 onclick={handleSpeakerPick}
+                                 onkeydown={handleSpeakerRowKeydown}>
+                                <div class="ssm-avatar ssm-avatar--sm" style={spk.avatarStyle}>
+                                    {spk.initials}
+                                </div>
+                                <div>
+                                    <div class="ssm-result-name">{spk.First_Name__c} {spk.Last_Name__c}</div>
+                                    <div class="ssm-result-email">{spk.Email__c}</div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                <template if:false={hasSpeakers}>
+                    <div class="ssm-empty-state-sm">
+                        <p>No results found yet.</p>
+                    </div>
+                </template>
+            </template>
+
+            <button type="button" class="ssm-create-toggle" onclick={toggleNewSpeaker}>
+                <lightning-icon icon-name={newSpeakerToggleIcon} size="x-small"
+                    class="ssm-create-toggle-icon"></lightning-icon>
+                <span>Create New Speaker</span>
+            </button>
+
+            <template if:true={showNewSpeaker}>
+                <div class="ssm-create-form">
+                    <div class="slds-grid slds-wrap slds-gutters">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                            <lightning-input
+                                label="First Name"
+                                name="First_Name__c"
+                                value={newSpeaker.First_Name__c}
+                                onchange={handleNewSpeakerFieldChange}>
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                            <lightning-input
+                                label="Last Name *"
+                                name="Last_Name__c"
+                                value={newSpeaker.Last_Name__c}
+                                onchange={handleNewSpeakerFieldChange}
+                                required>
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1">
+                            <lightning-input
+                                type="email"
+                                label="Email"
+                                name="Email__c"
+                                value={newSpeaker.Email__c}
+                                onchange={handleNewSpeakerFieldChange}>
+                            </lightning-input>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1">
+                            <lightning-textarea
+                                label="Bio"
+                                name="Bio__c"
+                                value={newSpeaker.Bio__c}
+                                onchange={handleNewSpeakerFieldChange}
+                                max-length="32000">
+                            </lightning-textarea>
+                        </div>
+                    </div>
+                    <div class="ssm-form-actions">
+                        <lightning-button
+                            variant="brand"
+                            label="Save &amp; Select Speaker"
+                            onclick={handleSaveNewSpeaker}
+                            disabled={isSaving}>
+                        </lightning-button>
+                    </div>
+                </div>
+            </template>
+        </template>
+
+        <!-- ── Pending Speaker Config ──────────────────────────────────── -->
+        <template if:true={pendingSpeaker}>
+            <div class="ssm-pending-speaker">
+                <div class="ssm-pending-header">
+                    <div class="ssm-avatar" style={pendingSpeaker.avatarStyle}>
+                        {pendingSpeaker.initials}
+                    </div>
+                    <div>
+                        <div class="ssm-speaker-name">{pendingSpeaker.fullName}</div>
+                        <div class="ssm-speaker-email">{pendingSpeaker.Email__c}</div>
+                    </div>
+                    <button type="button" class="ssm-link-btn" onclick={clearPendingSpeaker}>Change</button>
+                </div>
+                <div class="slds-grid slds-wrap slds-gutters slds-var-m-top_medium">
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                        <lightning-combobox
+                            label="Role"
+                            value={pendingAssignment.Role__c}
+                            options={roleOptions}
+                            onchange={handleAssignmentRoleChange}>
+                        </lightning-combobox>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                        <lightning-input
+                            type="number"
+                            label="Order"
+                            value={pendingAssignment.Order__c}
+                            min="1"
+                            max="999"
+                            onchange={handleAssignmentOrderChange}>
+                        </lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1">
+                        <lightning-input
+                            type="checkbox"
+                            label="Confirmed"
+                            checked={pendingAssignment.Confirmed__c}
+                            onchange={handleAssignmentConfirmedChange}>
+                        </lightning-input>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+    </lightning-modal-body>
+
+    <lightning-modal-footer>
+        <lightning-button label="Cancel" onclick={handleCancel}></lightning-button>
+        <template if:true={pendingSpeaker}>
+            <lightning-button
+                variant="brand"
+                label="Add to Session"
+                icon-name="utility:add"
+                onclick={handleAddSpeakerToSession}
+                disabled={isSaving}>
+            </lightning-button>
+        </template>
+    </lightning-modal-footer>
+</template>

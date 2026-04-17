@@ -1,14 +1,13 @@
-import { LightningElement, wire, track } from 'lwc';
+import { LightningElement, wire } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
+import SessionSpeakerAddModal from 'c/sessionSpeakerAddModal';
 
 import searchSessions from '@salesforce/apex/SessionSpeakerManagerController.searchSessions';
-import searchSpeakers from '@salesforce/apex/SessionSpeakerManagerController.searchSpeakers';
 import getSessionSpeakers from '@salesforce/apex/SessionSpeakerManagerController.getSessionSpeakers';
 import getSessionSpeakersLive from '@salesforce/apex/SessionSpeakerManagerController.getSessionSpeakersLive';
 import saveSession from '@salesforce/apex/SessionSpeakerManagerController.saveSession';
-import saveSpeaker from '@salesforce/apex/SessionSpeakerManagerController.saveSpeaker';
 import saveSessionSpeaker from '@salesforce/apex/SessionSpeakerManagerController.saveSessionSpeaker';
 import removeSessionSpeaker from '@salesforce/apex/SessionSpeakerManagerController.removeSessionSpeaker';
 
@@ -62,20 +61,12 @@ function enrichSession(session, selectedId) {
 function enrichSessionSpeaker(ss) {
     const fn = (ss.Speaker__r && ss.Speaker__r.First_Name__c) || '';
     const ln = (ss.Speaker__r && ss.Speaker__r.Last_Name__c) || '';
+    const name = `${fn} ${ln}`.trim() || 'speaker';
     return {
         ...ss,
         initials: initials(fn, ln),
-        avatarStyle: `background: ${avatarColor(ln + fn)};`
-    };
-}
-
-function enrichSpeaker(spk) {
-    const fn = spk.First_Name__c || '';
-    const ln = spk.Last_Name__c || '';
-    return {
-        ...spk,
-        initials: initials(fn, ln),
-        avatarStyle: `background: ${avatarColor(ln + fn)};`
+        avatarStyle: `background: ${avatarColor(ln + fn)};`,
+        removeAriaLabel: `Remove ${name}`
     };
 }
 
@@ -107,17 +98,29 @@ export default class SessionSpeakerManager extends NavigationMixin(LightningElem
     // ─── Step 1: Session Search ───────────────────────────────────────────────
     sessionSearchTerm = null;
     selectedSessionId = null;
-    @track selectedSession = null;
+    selectedSession = null;
     showNewSession = false;
-    @track newSession = { Status__c: 'Draft', Level__c: '' };
+    newSession = { Name: '', Status__c: 'Draft', Level__c: '' };
     isSaving = false;
     _sessionSearchTimeout;
+    _sessionSearchLoading = false;
+    _rawSessions = { data: null, error: null };
 
     @wire(searchSessions, { searchTerm: '$sessionSearchTerm' })
-    _rawSessions;
+    wiredSessions(result) {
+        this._rawSessions = result;
+        // Only clear the loading flag when actual data or an error arrives,
+        // not on the initial empty delivery before Apex resolves.
+        if (result.data !== undefined || result.error) {
+            this._sessionSearchLoading = false;
+        }
+    }
 
     get sessions() {
         if (this.sessionSearchTerm === null) return { data: null, error: null };
+        // Guard stale wire results while a new search is in-flight; suppresses
+        // the brief error flash that appeared before the new wire resolved.
+        if (this._sessionSearchLoading) return { data: null, error: null };
         if (!this._rawSessions) return { data: null, error: null };
         if (this._rawSessions.error) return this._rawSessions;
         if (!this._rawSessions.data) return this._rawSessions;
@@ -163,10 +166,16 @@ export default class SessionSpeakerManager extends NavigationMixin(LightningElem
     handleSessionSearchChange(event) {
         window.clearTimeout(this._sessionSearchTimeout);
         const val = event.target.value || '';
+        if (val.length >= 3) {
+            // Mark loading immediately so the sessions getter returns empty
+            // instead of exposing a stale error from a previous wire call.
+            this._sessionSearchLoading = true;
+        }
         // eslint-disable-next-line @lwc/lwc/no-async-operation
         this._sessionSearchTimeout = setTimeout(() => {
-            // Only fire wire when 3+ chars; null suppresses the wire via getter guard
-            this.sessionSearchTerm = val.length >= 3 ? val : null;
+            const newTerm = val.length >= 3 ? val : null;
+            if (newTerm === null) this._sessionSearchLoading = false;
+            this.sessionSearchTerm = newTerm;
         }, 300);
     }
 
@@ -179,6 +188,13 @@ export default class SessionSpeakerManager extends NavigationMixin(LightningElem
             this.selectedSessionId = id;
             const raw = (this._rawSessions.data || []).find(s => s.Id === id);
             this.selectedSession = raw ? enrichSession(raw, id) : null;
+        }
+    }
+
+    handleSessionCardKeydown(event) {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            this.handleSessionSelect(event);
         }
     }
 
@@ -195,6 +211,10 @@ export default class SessionSpeakerManager extends NavigationMixin(LightningElem
     }
 
     async handleSaveNewSession() {
+        if (!this.newSession.Name || !this.newSession.Name.trim()) {
+            this._toast('Session Name is required', 'Please enter a session name before saving.', 'error');
+            return;
+        }
         if (!this.newSession.Session_Date__c) {
             this._toast('Session Date is required', 'Please enter a session date before saving.', 'error');
             return;
@@ -206,7 +226,7 @@ export default class SessionSpeakerManager extends NavigationMixin(LightningElem
             this.selectedSessionId = saved.Id;
             this.selectedSession = enrichSession(saved, saved.Id);
             this.showNewSession = false;
-            this.newSession = { Status__c: 'Draft', Level__c: '' };
+            this.newSession = { Name: '', Status__c: 'Draft', Level__c: '' };
             await refreshApex(this._rawSessions);
         } catch (e) {
             this._toast('Error saving session', this._errorMessage(e), 'error');
@@ -229,31 +249,27 @@ export default class SessionSpeakerManager extends NavigationMixin(LightningElem
                 error: undefined
             };
         } catch (e) {
-            // Wire result will handle it if it arrives; ignore imperative error silently
+            // Surface error if wire hasn't already resolved
+            if (this._enrichedSessionSpeakers.data === null) {
+                this._enrichedSessionSpeakers = { data: null, error: e };
+            }
         }
     }
 
     // ─── Step 2: Speakers ─────────────────────────────────────────────────────
-    speakerSearchTerm = null;
-    showAddSpeakerPanel = false;
-    showNewSpeaker = false;
-    @track newSpeaker = {};
-    @track pendingSpeaker = null;
-    @track pendingAssignment = { Role__c: 'Panelist', Order__c: null, Confirmed__c: false };
-    _speakerSearchTimeout;
     _sessionSpeakersResult;
     _enrichedSessionSpeakers = { data: null, error: null };
 
     @wire(getSessionSpeakers, { sessionId: '$selectedSessionId' })
     wiredSessionSpeakers(result) {
         this._sessionSpeakersResult = result;
-        // Only update on success — a wire error must never wipe data loaded by
-        // the imperative bootstrap (getSessionSpeakersLive) in goToStep2()
         if (result.data) {
             this._enrichedSessionSpeakers = {
                 data: result.data.map(enrichSessionSpeaker),
                 error: undefined
             };
+        } else if (result.error) {
+            this._enrichedSessionSpeakers = { data: null, error: result.error };
         }
     }
 
@@ -269,156 +285,19 @@ export default class SessionSpeakerManager extends NavigationMixin(LightningElem
         return this.selectedSession && this.selectedSession.Status__c === 'Cancelled';
     }
 
-    @wire(searchSpeakers, { searchTerm: '$speakerSearchTerm' })
-    _rawSpeakers;
-
-    get speakers() {
-        if (this.speakerSearchTerm === null) return { data: null, error: null };
-        if (!this._rawSpeakers) return { data: null, error: null };
-        if (this._rawSpeakers.error) return this._rawSpeakers;
-        if (!this._rawSpeakers.data) return this._rawSpeakers;
-        return {
-            data: this._rawSpeakers.data.map(enrichSpeaker),
-            error: undefined
-        };
-    }
-
-    get hasSpeakers() {
-        return this.speakers.data && this.speakers.data.length > 0;
-    }
-
-    get newSpeakerToggleIcon() {
-        return this.showNewSpeaker ? 'utility:chevrondown' : 'utility:chevronright';
-    }
-
-    get roleOptions() {
-        return [
-            { label: 'Keynote', value: 'Keynote' },
-            { label: 'Panelist', value: 'Panelist' },
-            { label: 'Moderator', value: 'Moderator' },
-            { label: 'Workshop Leader', value: 'Workshop Leader' }
-        ];
-    }
-
     get reviewSpeakerCount() {
         return this.sessionSpeakers.data ? this.sessionSpeakers.data.length : 0;
     }
 
-    handleSpeakerSearchChange(event) {
-        window.clearTimeout(this._speakerSearchTimeout);
-        const val = event.target.value || '';
-        // eslint-disable-next-line @lwc/lwc/no-async-operation
-        this._speakerSearchTimeout = setTimeout(() => {
-            this.speakerSearchTerm = val.length >= 3 ? val : null;
-        }, 300);
-    }
-
-    openAddSpeakerPanel() {
+    async openAddSpeakerPanel() {
         if (this.isSessionCancelled) return;
-        this.showAddSpeakerPanel = true;
-        this.pendingSpeaker = null;
-        this.pendingAssignment = { Role__c: 'Panelist', Order__c: null, Confirmed__c: false };
-        this.showNewSpeaker = false;
-        this.newSpeaker = {};
-    }
-
-    closeAddSpeakerPanel() {
-        this.showAddSpeakerPanel = false;
-        this.pendingSpeaker = null;
-    }
-
-    toggleNewSpeaker() {
-        this.showNewSpeaker = !this.showNewSpeaker;
-    }
-
-    handleSpeakerPick(event) {
-        const id = event.currentTarget.dataset.id;
-        const fn = event.currentTarget.dataset.firstname || '';
-        const ln = event.currentTarget.dataset.lastname || '';
-        const email = event.currentTarget.dataset.email || '';
-        this.pendingSpeaker = {
-            Id: id,
-            First_Name__c: fn,
-            Last_Name__c: ln,
-            Email__c: email,
-            fullName: `${fn} ${ln}`.trim(),
-            initials: initials(fn, ln),
-            avatarStyle: `background: ${avatarColor(ln + fn)};`
-        };
-    }
-
-    clearPendingSpeaker() {
-        this.pendingSpeaker = null;
-    }
-
-    handleNewSpeakerFieldChange(event) {
-        const field = event.target.name;
-        this.newSpeaker = { ...this.newSpeaker, [field]: event.target.value };
-    }
-
-    async handleSaveNewSpeaker() {
-        if (!this.newSpeaker.Last_Name__c) {
-            this._toast('Last Name required', 'Speaker Last Name is required.', 'error');
-            return;
-        }
-        this.isSaving = true;
-        try {
-            const saved = await saveSpeaker({ speaker: this.newSpeaker });
-            this._toast('Speaker created', `${saved.First_Name__c || ''} ${saved.Last_Name__c} has been created.`, 'success');
-            const fn = saved.First_Name__c || '';
-            const ln = saved.Last_Name__c || '';
-            this.pendingSpeaker = {
-                Id: saved.Id,
-                First_Name__c: fn,
-                Last_Name__c: ln,
-                Email__c: saved.Email__c,
-                fullName: `${fn} ${ln}`.trim(),
-                initials: initials(fn, ln),
-                avatarStyle: `background: ${avatarColor(ln + fn)};`
-            };
-            this.showNewSpeaker = false;
-            this.newSpeaker = {};
-            // Reset search term to re-trigger the wire on next keystroke
-            this.speakerSearchTerm = null;
-        } catch (e) {
-            this._toast('Error saving speaker', this._errorMessage(e), 'error');
-        } finally {
-            this.isSaving = false;
-        }
-    }
-
-    handleAssignmentRoleChange(event) {
-        this.pendingAssignment = { ...this.pendingAssignment, Role__c: event.detail.value };
-    }
-
-    handleAssignmentOrderChange(event) {
-        this.pendingAssignment = { ...this.pendingAssignment, Order__c: event.target.value };
-    }
-
-    handleAssignmentConfirmedChange(event) {
-        this.pendingAssignment = { ...this.pendingAssignment, Confirmed__c: event.target.checked };
-    }
-
-    async handleAddSpeakerToSession() {
-        if (!this.pendingSpeaker || !this.selectedSessionId) return;
-        this.isSaving = true;
-        try {
-            await saveSessionSpeaker({
-                ss: {
-                    Session__c: this.selectedSessionId,
-                    Speaker__c: this.pendingSpeaker.Id,
-                    Role__c: this.pendingAssignment.Role__c,
-                    Order__c: this.pendingAssignment.Order__c,
-                    Confirmed__c: this.pendingAssignment.Confirmed__c
-                }
-            });
-            this._toast('Speaker added', `${this.pendingSpeaker.fullName} has been added to the session.`, 'success');
-            this.closeAddSpeakerPanel();
+        const speakerName = await SessionSpeakerAddModal.open({
+            sessionId: this.selectedSessionId,
+            size: 'small'
+        });
+        if (speakerName) {
+            this._toast('Speaker added', `${speakerName} has been added to the session.`, 'success');
             await this._refreshSpeakers();
-        } catch (e) {
-            this._toast('Error adding speaker', this._errorMessage(e), 'error');
-        } finally {
-            this.isSaving = false;
         }
     }
 
@@ -436,7 +315,7 @@ export default class SessionSpeakerManager extends NavigationMixin(LightningElem
     async handleConfirmedToggle(event) {
         const ssId = event.currentTarget.dataset.id;
         const confirmed = event.target.checked;
-        const existing = (this._sessionSpeakersResult.data || []).find(ss => ss.Id === ssId);
+        const existing = (this._enrichedSessionSpeakers.data || []).find(ss => ss.Id === ssId);
         if (!existing) return;
         try {
             await saveSessionSpeaker({
@@ -479,18 +358,20 @@ export default class SessionSpeakerManager extends NavigationMixin(LightningElem
         });
     }
 
+    disconnectedCallback() {
+        window.clearTimeout(this._sessionSearchTimeout);
+    }
+
     handleReset() {
         this.currentStep = 1;
         this.sessionSearchTerm = null;
         this.selectedSessionId = null;
         this.selectedSession = null;
         this.showNewSession = false;
-        this.newSession = { Status__c: 'Draft', Level__c: '' };
-        this.speakerSearchTerm = null;
-        this.showAddSpeakerPanel = false;
-        this.pendingSpeaker = null;
-        this.pendingAssignment = { Role__c: 'Panelist', Order__c: null, Confirmed__c: false };
+        this.newSession = { Name: '', Status__c: 'Draft', Level__c: '' };
         this._enrichedSessionSpeakers = { data: null, error: null };
+        this._sessionSpeakersResult = undefined;
+        this._sessionSearchLoading = false;
     }
 
     // ─── Utilities ────────────────────────────────────────────────────────────

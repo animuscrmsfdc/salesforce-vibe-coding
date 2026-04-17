@@ -1,0 +1,180 @@
+:host {
+    --ssm-indigo-dark: #5D0077;
+    --ssm-indigo-mid: #7A009A;
+    --ssm-blue-light: #9700C0;
+    --ssm-blue-pale: #F5E0FA;
+    --ssm-gray: #6B7280;
+    --ssm-gray-pale: #F3F4F6;
+    --ssm-border: #D1D5DB;
+    --ssm-radius-sm: 8px;
+    --ssm-transition: all 0.2s ease;
+}
+
+/* ── Search ──────────────────────────────────────────────────────────── */
+.ssm-search-wrap {
+    margin-bottom: 20px;
+}
+
+.ssm-search-input {
+    display: block;
+}
+
+/* ── Speaker Results ─────────────────────────────────────────────────── */
+.ssm-speaker-results {
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--ssm-border);
+    border-radius: var(--ssm-radius-sm);
+    margin-bottom: 16px;
+}
+
+.ssm-speaker-result-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.ssm-speaker-result-row:last-child {
+    border-bottom: none;
+}
+
+.ssm-speaker-result-row:hover {
+    background: var(--ssm-blue-pale);
+}
+
+.ssm-result-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ssm-indigo-dark);
+}
+
+.ssm-result-email {
+    font-size: 0.75rem;
+    color: var(--ssm-gray);
+}
+
+/* ── Avatar ──────────────────────────────────────────────────────────── */
+.ssm-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #ffffff;
+    flex-shrink: 0;
+    letter-spacing: 0.05em;
+}
+
+.ssm-avatar--sm {
+    width: 36px;
+    height: 36px;
+    font-size: 0.8125rem;
+    margin: 0;
+}
+
+/* ── Empty State ─────────────────────────────────────────────────────── */
+.ssm-empty-state-sm {
+    padding: 12px;
+    background: var(--ssm-gray-pale);
+    border-radius: var(--ssm-radius-sm);
+    color: var(--ssm-gray);
+    font-size: 0.8125rem;
+    margin-bottom: 16px;
+}
+
+/* ── Create Toggle ───────────────────────────────────────────────────── */
+.ssm-create-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ssm-indigo-mid);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 0;
+    margin-bottom: 4px;
+    transition: color 0.15s;
+}
+
+.ssm-create-toggle-icon {
+    --sds-c-icon-color-foreground-default: var(--ssm-indigo-mid);
+}
+
+.ssm-create-toggle:hover {
+    color: var(--ssm-blue-light);
+}
+
+.ssm-create-toggle:hover .ssm-create-toggle-icon {
+    --sds-c-icon-color-foreground-default: var(--ssm-blue-light);
+}
+
+/* ── Create Form ─────────────────────────────────────────────────────── */
+.ssm-create-form {
+    border: 1px solid #e5e7eb;
+    border-radius: var(--ssm-radius-sm);
+    padding: 16px;
+    margin: 8px 0 0;
+    animation: ssm-slide-in 0.2s ease;
+}
+
+.ssm-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--ssm-border);
+}
+
+@keyframes ssm-slide-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Pending Speaker ─────────────────────────────────────────────────── */
+.ssm-pending-speaker {
+    animation: ssm-slide-in 0.2s ease;
+}
+
+.ssm-pending-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--ssm-blue-pale);
+    border-radius: var(--ssm-radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+}
+
+.ssm-speaker-name {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--ssm-indigo-dark);
+    margin-bottom: 4px;
+}
+
+.ssm-speaker-email {
+    font-size: 0.75rem;
+    color: var(--ssm-gray);
+    word-break: break-all;
+}
+
+.ssm-link-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--ssm-blue-light);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+    flex-shrink: 0;
+}
