@@ -8,6 +8,7 @@
 - Login URL: https://login.salesforce.com
 
 ## CLI
+- Use `sf` CLI (not `sfdx`) for all Salesforce commands
 - Default target org alias: `dev-org`
 - Username: david@animuscrm.com
 - Deploy: `sf project deploy start --source-dir force-app --target-org dev-org`
@@ -20,6 +21,14 @@
 - Validation rule names: Descriptive_Snake_Case (e.g. `Amount_Cannot_Be_Negative`)
 - Always include a description on every metadata component
 - Label and API name must match (no abbreviations)
+
+## General
+- Never guess or fabricate Salesforce API names, field names, or metadata — read the files first.
+
+## Security Defaults
+- Always use `with sharing` in Apex unless explicitly told otherwise.
+- Never hardcode record IDs or org IDs — use Custom Metadata or Custom Labels.
+- Never use `Database.query()` with string concatenation — always use bind variables.
 
 ## Apex Coding Standards
 - Never use `WITH SECURITY_ENFORCED` on queries that include cross-object relationship fields (e.g. `Speaker__r.Name`) or as post-upsert return queries — use `Security.stripInaccessible(AccessType.READABLE, results).getRecords()` instead; it strips inaccessible fields gracefully rather than throwing
