@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "salesforce": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@salesforce/mcp@latest",
+        "--toolsets", "all",
+        "--orgs", "dev-org"
+      ]
+    }
+  }
+}
