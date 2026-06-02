@@ -1,17 +1,17 @@
-public with sharing class GetSpeakerSessionCount {
+global with sharing class GetSpeakerSessionCount {
 
-    public class Request {
+    global class Request {
         @InvocableVariable(label='Speaker Id' required=true)
         public Id speakerId;
     }
 
-    public class Response {
+    global class Response {
         @InvocableVariable(label='Session Count')
         public Integer sessionCount;
     }
 
     @InvocableMethod(label='Get Speaker Session Count' description='Returns the number of Session_Speaker__c records associated with each Speaker.')
-    public static List<Response> getSessionCounts(List<Request> requests) {
+    global static List<Response> getSessionCounts(List<Request> requests) {
         Set<Id> speakerIds = new Set<Id>();
         for (Request req : requests) {
             if (req.speakerId == null) {
