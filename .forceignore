@@ -4,6 +4,10 @@
 
 package.xml
 
+# Already deployed to org; excluded to avoid hitting the custom object limit during CI check-only deploys.
+# Remove this entry if Platform_Usages__e needs to be changed via CI.
+**/Platform_Usages__e/**
+
 # LWC configuration files
 **/jsconfig.json
 **/.eslintrc.json

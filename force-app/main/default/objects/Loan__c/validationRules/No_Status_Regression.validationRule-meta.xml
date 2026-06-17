@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>No_Status_Regression</fullName>
+    <active>true</active>
+    <description>Prevents backward status transitions that would corrupt Dynatrace state-machine flow metrics. Forward-only path: Submitted → Processing → Underwriting → Approved or Denied.</description>
+    <errorConditionFormula>AND(
+    NOT(ISNEW()),
+    OR(
+        AND(
+            ISPICKVAL(Status__c, 'Submitted'),
+            OR(
+                ISPICKVAL(PRIORVALUE(Status__c), 'Processing'),
+                ISPICKVAL(PRIORVALUE(Status__c), 'Underwriting'),
+                ISPICKVAL(PRIORVALUE(Status__c), 'Approved'),
+                ISPICKVAL(PRIORVALUE(Status__c), 'Denied')
+            )
+        ),
+        AND(
+            ISPICKVAL(Status__c, 'Processing'),
+            OR(
+                ISPICKVAL(PRIORVALUE(Status__c), 'Underwriting'),
+                ISPICKVAL(PRIORVALUE(Status__c), 'Approved'),
+                ISPICKVAL(PRIORVALUE(Status__c), 'Denied')
+            )
+        ),
+        AND(
+            ISPICKVAL(Status__c, 'Underwriting'),
+            OR(
+                ISPICKVAL(PRIORVALUE(Status__c), 'Approved'),
+                ISPICKVAL(PRIORVALUE(Status__c), 'Denied')
+            )
+        )
+    )
+)</errorConditionFormula>
+    <errorMessage>Status cannot be moved backward. Valid transitions: Submitted → Processing → Underwriting → Approved or Denied.</errorMessage>
+</ValidationRule>

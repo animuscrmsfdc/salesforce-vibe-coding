@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Amount_Must_Be_Positive</fullName>
+    <active>true</active>
+    <description>Ensures the loan amount is a positive value. Prevents null or zero amounts that would silently skew Dynatrace aggregation metrics.</description>
+    <errorConditionFormula>OR(ISNULL(Amount__c), Amount__c &lt;= 0)</errorConditionFormula>
+    <errorMessage>Loan amount must be a positive value.</errorMessage>
+</ValidationRule>

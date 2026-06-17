@@ -43,7 +43,8 @@ private class LoanTriggerHandlerTest {
 
     @IsTest
     static void afterUpdate_nonStatusChange_doesNotStampTimestamp() {
-        Loan__c loan = new Loan__c(Status__c = 'Submitted', Amount__c = 5000);
+        Contact broker = [SELECT Id FROM Contact LIMIT 1];
+        Loan__c loan = new Loan__c(Status__c = 'Submitted', Broker__c = broker.Id, Amount__c = 5000);
         insert loan;
 
         Test.startTest();
@@ -58,28 +59,43 @@ private class LoanTriggerHandlerTest {
 
     @IsTest
     static void afterUpdate_fullLifecycle_stampsTimestampOnEachTransition() {
-        Loan__c loan = new Loan__c(Status__c = 'Submitted', Amount__c = 25000);
+        Contact broker = [SELECT Id FROM Contact LIMIT 1];
+        Loan__c loan = new Loan__c(Status__c = 'Submitted', Broker__c = broker.Id, Amount__c = 25000);
         insert loan;
 
-        Test.startTest();
         loan.Status__c = 'Processing';
         update loan;
+        Loan__c q1 = [SELECT Status_Changed_At__c FROM Loan__c WHERE Id = :loan.Id];
+        System.assertNotEquals(null, q1.Status_Changed_At__c,
+            'Timestamp must be stamped on first transition');
+
         loan.Status__c = 'Underwriting';
         update loan;
+        Loan__c q2 = [SELECT Status_Changed_At__c FROM Loan__c WHERE Id = :loan.Id];
+        System.assertNotEquals(null, q2.Status_Changed_At__c,
+            'Timestamp must be stamped on second transition');
+
+        Test.startTest();
         loan.Status__c = 'Approved';
         update loan;
         Test.stopTest();
 
-        Loan__c saved = [SELECT Status__c, Status_Changed_At__c FROM Loan__c WHERE Id = :loan.Id];
-        System.assertEquals('Approved', saved.Status__c);
-        System.assertNotEquals(null, saved.Status_Changed_At__c);
+        Loan__c q3 = [SELECT Status__c, Status_Changed_At__c FROM Loan__c WHERE Id = :loan.Id];
+        System.assertEquals('Approved', q3.Status__c);
+        System.assertNotEquals(null, q3.Status_Changed_At__c,
+            'Timestamp must be stamped on third transition');
     }
 
     @IsTest
     static void publishStatusChange_bulkSafe_handles200Records() {
+        Contact broker = [SELECT Id FROM Contact LIMIT 1];
         List<Loan__c> loans = new List<Loan__c>();
         for (Integer i = 0; i < 200; i++) {
-            loans.add(new Loan__c(Status__c = 'Submitted', Amount__c = i * 1000));
+            loans.add(new Loan__c(
+                Status__c = 'Submitted',
+                Broker__c = broker.Id,
+                Amount__c = (i + 1) * 1000
+            ));
         }
 
         Test.startTest();
@@ -99,7 +115,8 @@ private class LoanTriggerHandlerTest {
 
     @IsTest
     static void publishStatusChange_allRecordsSkipped_returnsWithoutPublishing() {
-        Loan__c loan = new Loan__c(Status__c = 'Submitted', Amount__c = 1000);
+        Contact broker = [SELECT Id FROM Contact LIMIT 1];
+        Loan__c loan = new Loan__c(Status__c = 'Submitted', Broker__c = broker.Id, Amount__c = 1000);
         insert loan;
 
         Map<Id, Loan__c> oldMap = new Map<Id, Loan__c>{
@@ -113,17 +130,26 @@ private class LoanTriggerHandlerTest {
 
     @IsTest
     static void logError_doesNotThrow() {
+        Contact broker = [SELECT Id FROM Contact LIMIT 1];
+        Loan__c loan = new Loan__c(Status__c = 'Submitted', Broker__c = broker.Id, Amount__c = 1000);
+        insert loan;
+
         Test.startTest();
-        LoanService.logError('a0Bak000000TestAAA', 'Unit test error message');
+        LoanService.logError(loan.Id, 'Unit test error message');
         LoanService.logError(null, 'Null record id error');
         Test.stopTest();
     }
 
     @IsTest
     static void publishStatusChange_bulkUpdate_onlyFiresForStatusChanges() {
+        Contact broker = [SELECT Id FROM Contact LIMIT 1];
         List<Loan__c> loans = new List<Loan__c>();
         for (Integer i = 0; i < 10; i++) {
-            loans.add(new Loan__c(Status__c = 'Submitted', Amount__c = i * 1000));
+            loans.add(new Loan__c(
+                Status__c = 'Submitted',
+                Broker__c = broker.Id,
+                Amount__c = (i + 1) * 1000
+            ));
         }
         insert loans;
 

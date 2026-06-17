@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Broker_Required_On_Submission</fullName>
+    <active>true</active>
+    <description>Requires a broker to be specified when a loan is in Submitted status. Ensures Dynatrace broker-level segmentation is never missing for submitted loans.</description>
+    <errorConditionFormula>AND(ISPICKVAL(Status__c, 'Submitted'), ISNULL(Broker__c))</errorConditionFormula>
+    <errorMessage>A broker is required for submitted loans.</errorMessage>
+</ValidationRule>

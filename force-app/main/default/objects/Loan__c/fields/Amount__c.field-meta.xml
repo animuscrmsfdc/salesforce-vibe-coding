@@ -5,7 +5,7 @@
     <externalId>false</externalId>
     <label>Amount</label>
     <precision>16</precision>
-    <required>false</required>
+    <required>true</required>
     <scale>2</scale>
     <trackTrending>false</trackTrending>
     <type>Currency</type>
