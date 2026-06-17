@@ -22,6 +22,11 @@ private class LoanTriggerHandlerTest {
 
         Loan__c saved = [SELECT Id, Status__c, Status_Changed_At__c FROM Loan__c WHERE Id = :loan.Id];
         System.assertEquals('Submitted', saved.Status__c);
+
+        System.assertEquals(1, LoanService.lastPublishedEvents.size(),
+            'One event must be published on insert');
+        System.assertEquals('Submitted', LoanService.lastPublishedEvents[0].New_Status__c);
+        System.assertEquals(null, LoanService.lastPublishedEvents[0].Previous_Status__c);
     }
 
     @IsTest
@@ -103,6 +108,8 @@ private class LoanTriggerHandlerTest {
         Test.stopTest();
 
         System.assertEquals(200, [SELECT COUNT() FROM Loan__c]);
+        System.assertEquals(200, LoanService.lastPublishedEvents.size(),
+            'All 200 inserts must each produce one event');
     }
 
     @IsTest
@@ -126,6 +133,9 @@ private class LoanTriggerHandlerTest {
         Test.startTest();
         LoanService.publishStatusChange(new List<Loan__c>{ loan }, oldMap);
         Test.stopTest();
+
+        System.assertEquals(0, LoanService.lastPublishedEvents.size(),
+            'No events must be published when all records are skipped');
     }
 
     @IsTest
@@ -164,5 +174,7 @@ private class LoanTriggerHandlerTest {
             System.assertEquals(null, saved.Status_Changed_At__c,
                 'Non-status updates must not stamp the timestamp');
         }
+        System.assertEquals(0, LoanService.lastPublishedEvents.size(),
+            'No events should be published when only non-status fields change');
     }
 }
