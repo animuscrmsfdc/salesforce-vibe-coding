@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Broker__c</fullName>
+    <description>Contact record of the broker who submitted the loan application. Broker Id is included in Loan_Status_Change__e for Dynatrace broker-level performance segmentation.</description>
+    <externalId>false</externalId>
+    <label>Broker</label>
+    <referenceTo>Contact</referenceTo>
+    <relationshipLabel>Loans</relationshipLabel>
+    <relationshipName>Loans</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+</CustomField>

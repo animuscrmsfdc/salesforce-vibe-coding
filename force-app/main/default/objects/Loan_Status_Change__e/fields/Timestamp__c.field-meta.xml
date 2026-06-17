@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Timestamp__c</fullName>
+    <description>System.now() at the moment the event was published. Used by Dynatrace as the authoritative transition time for dwell-time and throughput metrics.</description>
+    <externalId>false</externalId>
+    <isFilteringDisabled>false</isFilteringDisabled>
+    <isNameField>false</isNameField>
+    <isSortingDisabled>false</isSortingDisabled>
+    <label>Timestamp</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>

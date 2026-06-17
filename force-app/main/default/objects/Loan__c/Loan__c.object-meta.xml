@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Loan application record tracking the full lifecycle from submission through underwriting to approval or denial. Fires Loan_Status_Change__e on every status transition for Dynatrace anomaly detection.</description>
+    <enableBulkApi>true</enableBulkApi>
+    <enableSearch>true</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>true</enableStreamingApi>
+    <label>Loan</label>
+    <nameField>
+        <displayFormat>LOAN-{0000}</displayFormat>
+        <label>Loan Name</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Loans</pluralLabel>
+    <sharingModel>ReadWrite</sharingModel>
+    <visibility>Public</visibility>
+</CustomObject>
