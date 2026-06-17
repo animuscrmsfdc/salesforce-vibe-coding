@@ -2,7 +2,7 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Broker_Id__c</fullName>
     <description>18-char Salesforce record Id of the Contact (broker) linked to the loan. Always populated via String.valueOf(Id). Enables Dynatrace broker-level performance segmentation. Null when the loan has no broker.</description>
-    <externalId>true</externalId>
+    <externalId>false</externalId>
     <isFilteringDisabled>false</isFilteringDisabled>
     <isNameField>false</isNameField>
     <isSortingDisabled>false</isSortingDisabled>
