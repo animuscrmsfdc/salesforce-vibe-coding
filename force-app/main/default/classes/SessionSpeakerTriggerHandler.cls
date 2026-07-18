@@ -44,58 +44,24 @@ public with sharing class SessionSpeakerTriggerHandler {
 
         // Lock existing Session_Speaker__c rows for the affected speakers to prevent race conditions.
         // Exclude bookings on cancelled sessions to avoid false-positive overlap rejections.
-        List<Session_Speaker__c> existingAssignments = [
-            SELECT Id, Speaker__c, Session__r.Session_Date__c, Session__r.End_Date__c
-            FROM Session_Speaker__c
-            WHERE Speaker__c IN :speakerIds
-              AND Session__r.Status__c != 'Cancelled'
-        ];
-
-        // Build overlap map: speakerId -> (existingAssignmentId -> [start, end])
-        // Keyed by assignment Id so each record's own previous window can be excluded
-        // individually during bulk updates, preventing cross-record exclusion.
-        Map<Id, Map<Id, Datetime[]>> speakerWindows = new Map<Id, Map<Id, Datetime[]>>();
-        for (Session_Speaker__c existing : existingAssignments) {
-            Datetime existStart = existing.Session__r.Session_Date__c;
-            Datetime existEnd   = existing.Session__r.End_Date__c;
-            if (existStart == null) continue;
-            if (!speakerWindows.containsKey(existing.Speaker__c)) {
-                speakerWindows.put(existing.Speaker__c, new Map<Id, Datetime[]>());
-            }
-            speakerWindows.get(existing.Speaker__c).put(existing.Id, new Datetime[]{ existStart, existEnd });
-        }
+        Map<Id, Map<Id, SpeakerAvailabilityService.Window>> speakerWindows =
+            SpeakerAvailabilityService.getActiveWindowsBySpeaker(speakerIds);
 
         for (Session_Speaker__c a : assignments) {
             Session__c session = sessionMap.get(a.Session__c);
             if (session == null || session.Session_Date__c == null) continue;
 
-            Datetime newStart = session.Session_Date__c;
-            Datetime newEnd   = session.End_Date__c;
+            // On update, skip only this specific assignment's own previous booking,
+            // never a different record for the same speaker, to keep bulk updates correct.
+            SpeakerAvailabilityService.Window conflict = SpeakerAvailabilityService.findConflict(
+                speakerWindows.get(a.Speaker__c),
+                session.Session_Date__c,
+                session.End_Date__c,
+                a.Id
+            );
 
-            Map<Id, Datetime[]> windows = speakerWindows.get(a.Speaker__c);
-            if (windows == null) continue;
-
-            for (Id existingId : windows.keySet()) {
-                // On update, skip only this specific assignment's own previous booking
-                if (a.Id != null && existingId == a.Id) continue;
-
-                Datetime[] window   = windows.get(existingId);
-                Datetime existStart = window[0];
-                Datetime existEnd   = window[1];
-
-                Boolean overlaps;
-                if (newEnd != null && existEnd != null) {
-                    // Full overlap check: newStart < existEnd && newEnd > existStart
-                    overlaps = newStart < existEnd && newEnd > existStart;
-                } else {
-                    // Fall back to exact start-time match when end times are not set
-                    overlaps = newStart == existStart;
-                }
-
-                if (overlaps) {
-                    a.addError('Speaker is already booked for another session at an overlapping date and time.');
-                    break;
-                }
+            if (conflict != null) {
+                a.addError('Speaker is already booked for another session at an overlapping date and time.');
             }
         }
     }
