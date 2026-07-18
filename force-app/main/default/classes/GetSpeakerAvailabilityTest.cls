@@ -52,32 +52,11 @@ private class GetSpeakerAvailabilityTest {
         System.assertEquals(assignment.Id, responses[0].conflictingAssignmentId, 'Should report the conflicting assignment');
     }
 
-    @IsTest
-    static void bookingOnCancelledSession_isIgnored() {
-        Speaker__c speaker = [SELECT Id FROM Speaker__c LIMIT 1];
-        Datetime base = Datetime.now();
-
-        Session__c cancelled = new Session__c(Name = 'Cancelled', Session_Date__c = base, End_Date__c = base.addHours(1));
-        insert cancelled;
-        insert new Session_Speaker__c(Session__c = cancelled.Id, Speaker__c = speaker.Id);
-        // Cancel the session after the speaker is already booked — the trigger only
-        // blocks *new* assignments to cancelled sessions, not the session's own status change.
-        cancelled.Status__c = 'Cancelled';
-        update cancelled;
-
-        GetSpeakerAvailability.Request req = new GetSpeakerAvailability.Request();
-        req.speakerId = speaker.Id;
-        req.startTime = base;
-        req.endTime = base.addHours(1);
-
-        Test.startTest();
-        List<GetSpeakerAvailability.Response> responses = GetSpeakerAvailability.checkAvailability(
-            new List<GetSpeakerAvailability.Request>{ req }
-        );
-        Test.stopTest();
-
-        System.assert(responses[0].isAvailable, 'Bookings on cancelled sessions should not block availability');
-    }
+    // Note: there is no test here for a booking on an already-cancelled session being ignored.
+    // That state ("Session_Speaker__c whose Session__c is Cancelled") is unreachable via DML
+    // in this org: SessionSpeakerTriggerHandler blocks new assignments to a cancelled session,
+    // and the No_Speakers_On_Cancelled validation rule blocks cancelling a session that still
+    // has assignments. See SessionSpeakerTriggerHandlerTest.cancelledSession_assignmentRejected.
 
     @IsTest
     static void nullSpeakerId_throwsIllegalArgumentException() {

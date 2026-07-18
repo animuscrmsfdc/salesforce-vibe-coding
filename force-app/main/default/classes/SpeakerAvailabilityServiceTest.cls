@@ -22,30 +22,13 @@ private class SpeakerAvailabilityServiceTest {
         System.assert(!SpeakerAvailabilityService.overlaps(base, null, base.addHours(1), null), 'Different start should not match');
     }
 
-    @IsTest
-    static void getActiveWindowsBySpeaker_excludesCancelledSessions() {
-        Speaker__c speaker = [SELECT Id FROM Speaker__c LIMIT 1];
-        Datetime base = Datetime.now();
-
-        Session__c active = new Session__c(Name = 'Active', Session_Date__c = base, End_Date__c = base.addHours(1));
-        Session__c toCancel = new Session__c(Name = 'To Cancel', Session_Date__c = base.addHours(2), End_Date__c = base.addHours(3));
-        insert new List<Session__c>{ active, toCancel };
-        insert new List<Session_Speaker__c>{
-            new Session_Speaker__c(Session__c = active.Id, Speaker__c = speaker.Id),
-            new Session_Speaker__c(Session__c = toCancel.Id, Speaker__c = speaker.Id)
-        };
-        // Cancel the session after the speaker is already booked — the trigger only
-        // blocks *new* assignments to cancelled sessions, not the session's own status change.
-        toCancel.Status__c = 'Cancelled';
-        update toCancel;
-
-        Test.startTest();
-        Map<Id, Map<Id, SpeakerAvailabilityService.Window>> windows =
-            SpeakerAvailabilityService.getActiveWindowsBySpeaker(new Set<Id>{ speaker.Id });
-        Test.stopTest();
-
-        System.assertEquals(1, windows.get(speaker.Id).size(), 'Only the active session booking should be returned');
-    }
+    // Note: there is no test here for excluding a booking on an already-cancelled session.
+    // That state ("Session_Speaker__c whose Session__c is Cancelled") is unreachable via DML
+    // in this org: SessionSpeakerTriggerHandler blocks new assignments to a cancelled session,
+    // and the No_Speakers_On_Cancelled validation rule blocks cancelling a session that still
+    // has assignments. See SessionSpeakerTriggerHandlerTest.cancelledSession_assignmentRejected.
+    // The Session__r.Status__c != 'Cancelled' filter in getActiveWindowsBySpeaker remains as
+    // defensive code for that combination.
 
     @IsTest
     static void findConflict_excludesGivenAssignmentId() {

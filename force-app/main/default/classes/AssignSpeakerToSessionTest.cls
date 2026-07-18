@@ -19,11 +19,20 @@ private class AssignSpeakerToSessionTest {
         req.sessionId = session.Id;
         req.role = 'Keynote';
 
-        Test.startTest();
-        List<AssignSpeakerToSession.Response> responses = AssignSpeakerToSession.assignSpeakers(
-            new List<AssignSpeakerToSession.Request>{ req }
-        );
-        Test.stopTest();
+        // Run as a user holding the Session_Speaker_User permission set so this test's
+        // outcome doesn't depend on whichever profile happens to run the org's CI pipeline.
+        // Without it, Security.stripInaccessible(CREATABLE) silently drops Role__c for a
+        // user with no edit FLS on that field, and the picklist falls back to its default.
+        User coordinator = createSessionSpeakerUser();
+
+        List<AssignSpeakerToSession.Response> responses;
+        System.runAs(coordinator) {
+            Test.startTest();
+            responses = AssignSpeakerToSession.assignSpeakers(
+                new List<AssignSpeakerToSession.Request>{ req }
+            );
+            Test.stopTest();
+        }
 
         System.assertEquals(1, responses.size(), 'Should return one response per request');
         System.assert(responses[0].success, 'Assignment should succeed');
@@ -205,5 +214,27 @@ private class AssignSpeakerToSessionTest {
         System.assertEquals(2, responses.size(), 'Should return one response per request, in order');
         System.assert(responses[0].success, 'First (valid) request should succeed');
         System.assert(!responses[1].success, 'Second (invalid) request should fail without affecting the first');
+    }
+
+    private static User createSessionSpeakerUser() {
+        Profile standardProfile = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User u = new User(
+            FirstName = 'Session',
+            LastName = 'Coordinator',
+            Email = 'session.coordinator@animuscrm.test.invalid',
+            Username = 'session.coordinator.' + DateTime.now().getTime() + '@animuscrm.test.invalid',
+            Alias = 'sescoo',
+            TimeZoneSidKey = 'America/Los_Angeles',
+            LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8',
+            LanguageLocaleKey = 'en_US',
+            ProfileId = standardProfile.Id
+        );
+        insert u;
+
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Session_Speaker_User' LIMIT 1];
+        insert new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id);
+
+        return u;
     }
 }
