@@ -13,7 +13,9 @@ public with sharing class SpeakerAvailabilityService {
         if (newEnd != null && existEnd != null) {
             return newStart < existEnd && newEnd > existStart;
         }
-        return newStart == existStart;
+        Datetime effectiveNewEnd = newEnd != null ? newEnd : newStart;
+        Datetime effectiveExistEnd = existEnd != null ? existEnd : existStart;
+        return newStart <= effectiveExistEnd && effectiveNewEnd >= existStart;
     }
 
     // Active (non-cancelled) booking windows per speaker, keyed by assignment Id so
