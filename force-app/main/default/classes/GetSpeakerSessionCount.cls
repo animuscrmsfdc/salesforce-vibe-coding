@@ -3,11 +3,15 @@ global with sharing class GetSpeakerSessionCount {
     global class Request {
         @InvocableVariable(label='Speaker Id' required=true)
         public Id speakerId;
+
+        global Request() {}
     }
 
     global class Response {
         @InvocableVariable(label='Session Count')
         public Integer sessionCount;
+
+        global Response() {}
     }
 
     @InvocableMethod(label='Get Speaker Session Count' description='Returns the number of Session_Speaker__c records associated with each Speaker.')

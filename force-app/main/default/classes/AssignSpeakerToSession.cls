@@ -9,6 +9,8 @@ global with sharing class AssignSpeakerToSession {
 
         @InvocableVariable(label='Role' description='Optional: Keynote, Panelist, Moderator, or Workshop Leader. Defaults to the field default if omitted.')
         public String role;
+
+        global Request() {}
     }
 
     global class Response {
@@ -20,6 +22,8 @@ global with sharing class AssignSpeakerToSession {
 
         @InvocableVariable(label='Message' description='Human-readable confirmation on success, or the reason the assignment could not be made.')
         public String message;
+
+        global Response() {}
     }
 
     @InvocableMethod(label='Assign Speaker To Session' description='Creates a Session_Speaker__c record linking a Speaker to a Session, enforcing existing double-booking and cancelled-session rules.')

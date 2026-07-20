@@ -9,6 +9,8 @@ global with sharing class GetSpeakerAvailability {
 
         @InvocableVariable(label='End Date/Time')
         public Datetime endTime;
+
+        global Request() {}
     }
 
     global class Response {
@@ -17,6 +19,8 @@ global with sharing class GetSpeakerAvailability {
 
         @InvocableVariable(label='Conflicting Session Speaker Id')
         public Id conflictingAssignmentId;
+
+        global Response() {}
     }
 
     @InvocableMethod(label='Get Speaker Availability' description='Checks whether a Speaker is free for a candidate session time window, without creating a booking.')
