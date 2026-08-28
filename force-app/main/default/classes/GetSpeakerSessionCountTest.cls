@@ -3,8 +3,8 @@ private class GetSpeakerSessionCountTest {
 
     @TestSetup
     static void makeData() {
-        Speaker__c speaker1 = new Speaker__c(Last_Name__c = 'Smith');
-        Speaker__c speaker2 = new Speaker__c(Last_Name__c = 'Jones');
+        Speaker__c speaker1 = new Speaker__c(First_Name__c = 'Alice', Last_Name__c = 'Smith');
+        Speaker__c speaker2 = new Speaker__c(First_Name__c = 'Bob',   Last_Name__c = 'Jones');
         insert new List<Speaker__c>{ speaker1, speaker2 };
 
         Session__c session1 = new Session__c(Session_Date__c = Date.today());
@@ -85,18 +85,18 @@ private class GetSpeakerSessionCountTest {
     }
 
     @IsTest
-    static void nullSpeakerId_throwsIllegalArgumentException() {
+    static void noInput_returnsGracefulErrorMessage() {
         GetSpeakerSessionCount.Request req = new GetSpeakerSessionCount.Request();
-        req.speakerId = null;
 
         Test.startTest();
-        try {
-            GetSpeakerSessionCount.getSessionCounts(new List<GetSpeakerSessionCount.Request>{ req });
-            System.assert(false, 'Expected IllegalArgumentException was not thrown');
-        } catch (IllegalArgumentException e) {
-            System.assert(e.getMessage().contains('speakerId must not be null'), 'Exception message should describe the cause');
-        }
+        List<GetSpeakerSessionCount.Response> responses = GetSpeakerSessionCount.getSessionCounts(
+            new List<GetSpeakerSessionCount.Request>{ req }
+        );
         Test.stopTest();
+
+        System.assertEquals(1, responses.size(), 'Should return one response');
+        System.assertNotEquals(null, responses[0].errorMessage, 'Error message should be set when no input is provided');
+        System.assertEquals(false, responses[0].isAmbiguous, 'isAmbiguous should be false on error');
     }
 
     @IsTest
