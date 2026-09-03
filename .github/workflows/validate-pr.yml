@@ -12,6 +12,10 @@ on:
       - 'force-app/**'
       - 'manifest/**'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     name: Validate metadata & run Apex tests
@@ -64,3 +68,15 @@ jobs:
       - name: Report results
         if: always()
         run: sf project deploy report --use-most-recent --json || true
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Validate PR Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| PMD static analysis | See \`pmd-results\` artifact |" >> $GITHUB_STEP_SUMMARY
+          echo "| Check-only deploy + RunLocalTests | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Triggered by: ${{ github.actor }} on \`${{ github.head_ref }}\`" >> $GITHUB_STEP_SUMMARY

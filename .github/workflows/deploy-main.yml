@@ -12,6 +12,10 @@ on:
       - 'force-app/**'
       - 'manifest/**'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy metadata to dev-org
@@ -58,3 +62,15 @@ jobs:
         run: |
           echo "Deploy failed. Check the logs above for details."
           exit 1
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Deploy to Dev Org Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy + RunLocalTests | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Destructive changes | applied on success |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Triggered by: ${{ github.actor }} on \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY

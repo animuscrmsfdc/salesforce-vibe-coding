@@ -1,5 +1,7 @@
 # AnimusCRM — Salesforce Developer Org
 
+![Deploy to Dev Org](https://github.com/animuscrmsfdc/animuscrm/actions/workflows/deploy-main.yml/badge.svg)
+
 A Salesforce DX project for the AnimusCRM developer org, configured for AI-assisted development with Claude Code. The project includes Salesforce metadata, Apex code, and a full Claude Code configuration (skills, agents, commands) that accelerates Salesforce development workflows.
 
 ---
