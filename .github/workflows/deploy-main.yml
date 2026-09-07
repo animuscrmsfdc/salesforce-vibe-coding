@@ -20,9 +20,25 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Set npm global prefix to home
+        run: |
+          npm config set prefix ~/.npm-global
+          echo "$HOME/.npm-global/bin" >> $GITHUB_PATH
+
+      - name: Cache sf CLI
+        id: cache-sf
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm-global
+          key: sf-cli-${{ runner.os }}-v7
+          restore-keys: sf-cli-${{ runner.os }}-
 
       - name: Install sf CLI
-        run: npm install -g @salesforce/cli --prefer-global
+        if: steps.cache-sf.outputs.cache-hit != 'true'
+        run: npm install -g @salesforce/cli
 
       - name: Authenticate to dev org via SFDX Auth URL
         run: |
@@ -42,8 +58,21 @@ jobs:
       - name: Verify deploy status
         run: sf project deploy report --use-most-recent --json
 
+      - name: Check if destructive changes manifest was modified
+        id: check-destructive
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            if git diff --name-only HEAD~1 HEAD -- manifest/destructiveChanges.xml | grep -q .; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
       - name: Apply destructive changes
-        if: success()
+        if: success() && steps.check-destructive.outputs.changed == 'true'
         run: |
           sf project deploy start \
             --manifest manifest/package-empty.xml \
