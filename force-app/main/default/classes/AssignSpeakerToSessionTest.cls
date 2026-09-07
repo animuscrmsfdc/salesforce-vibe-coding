@@ -8,6 +8,14 @@ private class AssignSpeakerToSessionTest {
 
     @IsTest
     static void validAssignment_succeedsWithFriendlyMessage() {
+        // Create setup objects (User + PermissionSetAssignment) before any non-setup DML
+        // to avoid MIXED_DML_OPERATION errors within the same transaction.
+        // Run as a user holding the Session_Speaker_User permission set so this test's
+        // outcome doesn't depend on whichever profile happens to run the org's CI pipeline.
+        // Without it, Security.stripInaccessible(CREATABLE) silently drops Role__c for a
+        // user with no edit FLS on that field, and the picklist falls back to its default.
+        User coordinator = createSessionSpeakerUser();
+
         Speaker__c speaker = [SELECT Id FROM Speaker__c LIMIT 1];
         Session__c session = new Session__c(
             Name = 'Keynote Session', Session_Date__c = Datetime.now(), End_Date__c = Datetime.now().addHours(1)
@@ -18,12 +26,6 @@ private class AssignSpeakerToSessionTest {
         req.speakerId = speaker.Id;
         req.sessionId = session.Id;
         req.role = 'Keynote';
-
-        // Run as a user holding the Session_Speaker_User permission set so this test's
-        // outcome doesn't depend on whichever profile happens to run the org's CI pipeline.
-        // Without it, Security.stripInaccessible(CREATABLE) silently drops Role__c for a
-        // user with no edit FLS on that field, and the picklist falls back to its default.
-        User coordinator = createSessionSpeakerUser();
 
         List<AssignSpeakerToSession.Response> responses;
         System.runAs(coordinator) {

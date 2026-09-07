@@ -60,7 +60,9 @@ global with sharing class GetSpeakerSessionCount {
 
                 List<Speaker__c> matches = lookupSpeakers(req, term);
                 if (matches.isEmpty()) {
-                    res.errorMessage = 'No speaker found matching "' + (String.isNotBlank(req.email) ? req.email.trim() : term) + '". Please try a different name or email.';
+                    String searched = String.isNotBlank(req.email) ? req.email.trim() : term;
+                    res.errorMessage = 'No speaker found matching "' + searched + '". Here are the 10 most recently updated speakers — pick one and try again.';
+                    res.candidates = getRecentSpeakers();
                     responses.add(res);
                     continue;
                 }
@@ -112,6 +114,22 @@ global with sharing class GetSpeakerSessionCount {
             return [SELECT Id, First_Name__c, Last_Name__c, Email__c
                     FROM Speaker__c WHERE Email__c = :val WITH USER_MODE];
         }
+        if (String.isNotBlank(req.firstName) && String.isNotBlank(req.lastName)) {
+            String fn = req.firstName.trim() + '%';
+            String ln = req.lastName.trim() + '%';
+            return [SELECT Id, First_Name__c, Last_Name__c, Email__c
+                    FROM Speaker__c WHERE First_Name__c LIKE :fn AND Last_Name__c LIKE :ln WITH USER_MODE];
+        }
+        if (String.isNotBlank(req.firstName)) {
+            String fn = req.firstName.trim() + '%';
+            return [SELECT Id, First_Name__c, Last_Name__c, Email__c
+                    FROM Speaker__c WHERE First_Name__c LIKE :fn WITH USER_MODE];
+        }
+        if (String.isNotBlank(req.lastName)) {
+            String ln = req.lastName.trim() + '%';
+            return [SELECT Id, First_Name__c, Last_Name__c, Email__c
+                    FROM Speaker__c WHERE Last_Name__c LIKE :ln WITH USER_MODE];
+        }
         List<List<SObject>> results = [FIND :term IN ALL FIELDS
                                        RETURNING Speaker__c(Id, First_Name__c, Last_Name__c, Email__c)];
         return (List<Speaker__c>) results[0];
@@ -123,6 +141,16 @@ global with sharing class GetSpeakerSessionCount {
         if (String.isNotBlank(req.firstName)) parts.add(req.firstName.trim());
         if (String.isNotBlank(req.lastName))  parts.add(req.lastName.trim());
         return String.join(parts, ' ');
+    }
+
+    private static List<CandidateSpeaker> getRecentSpeakers() {
+        return toCandidates([
+            SELECT Id, First_Name__c, Last_Name__c, Email__c
+            FROM Speaker__c
+            WITH USER_MODE
+            ORDER BY LastModifiedDate DESC
+            LIMIT 10
+        ]);
     }
 
     private static List<CandidateSpeaker> toCandidates(List<Speaker__c> speakers) {

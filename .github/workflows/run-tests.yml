@@ -13,6 +13,10 @@ on:
   schedule:
     - cron: '0 6 * * *'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Run Apex tests
@@ -20,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set npm global prefix to home
         run: |
@@ -64,3 +68,15 @@ jobs:
             --code-coverage \
             --result-format human \
             --wait 20
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Apex Test Run Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Scope | ${{ inputs.test_class != '' && inputs.test_class || 'RunLocalTests (all)' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Triggered by: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
