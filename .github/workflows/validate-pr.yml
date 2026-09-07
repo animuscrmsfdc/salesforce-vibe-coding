@@ -24,17 +24,54 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set npm global prefix to home
+        run: |
+          npm config set prefix ~/.npm-global
+          echo "$HOME/.npm-global/bin" >> $GITHUB_PATH
+
+      - name: Cache sf CLI
+        id: cache-sf
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm-global
+          key: sf-cli-${{ runner.os }}-v7
+          restore-keys: sf-cli-${{ runner.os }}-
 
       - name: Install sf CLI
-        run: npm install -g @salesforce/cli --prefer-global
+        if: steps.cache-sf.outputs.cache-hit != 'true'
+        run: npm install -g @salesforce/cli
+
+      - name: Cache sfdx-scanner plugin
+        id: cache-scanner
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/sf
+          key: sf-scanner-${{ runner.os }}-v4
+          restore-keys: sf-scanner-${{ runner.os }}-
 
       - name: Install Salesforce Code Analyzer
+        if: steps.cache-scanner.outputs.cache-hit != 'true'
         run: sf plugins install @salesforce/sfdx-scanner
 
+      - name: Get changed Apex files
+        id: changed-files
+        run: |
+          BASE=${{ github.event.pull_request.base.sha }}
+          HEAD=${{ github.event.pull_request.head.sha }}
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD" \
+            -- 'force-app/main/default/classes' 'force-app/main/default/triggers' \
+            | grep -E '\.(cls|trigger)$' \
+            | tr '\n' ',')
+          echo "files=${CHANGED%,}" >> $GITHUB_OUTPUT
+
       - name: Run PMD static analysis
+        if: steps.changed-files.outputs.files != ''
         run: |
           sf scanner run \
-            --target "force-app/main/default/classes,force-app/main/default/triggers" \
+            --target "${{ steps.changed-files.outputs.files }}" \
             --engine pmd \
             --pmdconfig pmd-ruleset.xml \
             --format sarif \

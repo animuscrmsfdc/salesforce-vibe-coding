@@ -26,8 +26,22 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v7
 
+      - name: Set npm global prefix to home
+        run: |
+          npm config set prefix ~/.npm-global
+          echo "$HOME/.npm-global/bin" >> $GITHUB_PATH
+
+      - name: Cache sf CLI
+        id: cache-sf
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm-global
+          key: sf-cli-${{ runner.os }}-v7
+          restore-keys: sf-cli-${{ runner.os }}-
+
       - name: Install sf CLI
-        run: npm install -g @salesforce/cli --prefer-global
+        if: steps.cache-sf.outputs.cache-hit != 'true'
+        run: npm install -g @salesforce/cli
 
       - name: Authenticate to dev org via SFDX Auth URL
         run: |
