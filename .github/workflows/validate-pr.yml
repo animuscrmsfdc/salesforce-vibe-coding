@@ -110,14 +110,16 @@ jobs:
 
           echo "=== Component failures ==="
           jq -r '
-            (.result.details.componentFailures // [])[] |
+            (.result.details.componentFailures // []) |
+            if type == "array" then .[] else . end |
             "COMPONENT [\(.problemType // "Error")] \(.fileName // ""):\(.lineNumber // "?") — \(.problem // "")"
           ' deploy-result.json || true
 
           echo "=== Test failures ==="
           jq -r '
-            (.result.details.runTestResult.failures // [])[] |
-            "TEST \(.name // "").​\(.methodName // "") — \(.message // "")\n  \(.stackTrace // "")"
+            (.result.details.runTestResult.failures // []) |
+            if type == "array" then .[] else . end |
+            "TEST \(.name // "") \(.methodName // "") — \(.message // "")\n  \(.stackTrace // "")"
           ' deploy-result.json || true
 
           cat deploy-result.json
@@ -129,7 +131,6 @@ jobs:
           sf project deploy report \
             --use-most-recent \
             --target-org dev-org \
-            --verbose \
             --json || true
 
       - name: Upload deployment result
