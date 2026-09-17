@@ -80,7 +80,7 @@ global with sharing class AssignSpeakerToSession {
                 String term = buildSpeakerSearchTerm(req);
                 if (String.isBlank(term) && String.isBlank(req.email)) {
                     responses[i].success = false;
-                    responses[i].message = 'Provide a speaker name, email, or Speaker Id.';
+                    responses[i].message = 'Speaker and session are required — provide names or IDs for both.';
                     continue;
                 }
                 List<Speaker__c> matches = lookupSpeakers(req, term);
