@@ -14,7 +14,10 @@ private class AssignSpeakerToSessionTest {
         // outcome doesn't depend on whichever profile happens to run the org's CI pipeline.
         // Without it, Security.stripInaccessible(CREATABLE) silently drops Role__c for a
         // user with no edit FLS on that field, and the picklist falls back to its default.
-        User coordinator = createSessionSpeakerUser();
+        User coordinator;
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            coordinator = createSessionSpeakerUser();
+        }
 
         Speaker__c speaker = [SELECT Id FROM Speaker__c LIMIT 1];
         Session__c session = new Session__c(
