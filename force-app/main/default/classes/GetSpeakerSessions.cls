@@ -1,4 +1,4 @@
-global with sharing class GetSpeakerSessionCount {
+global with sharing class GetSpeakerSessions {
 
     global class CandidateSpeaker {
         @InvocableVariable(label='Candidate Speaker Id')
@@ -10,6 +10,22 @@ global with sharing class GetSpeakerSessionCount {
         @InvocableVariable(label='Candidate Email')
         public String email;
         global CandidateSpeaker() {}
+    }
+
+    global class SessionItem {
+        @InvocableVariable(label='Session Id')
+        public Id sessionId;
+        @InvocableVariable(label='Session Name')
+        public String name;
+        @InvocableVariable(label='Start Date/Time')
+        public Datetime startTime;
+        @InvocableVariable(label='End Date/Time')
+        public Datetime endTime;
+        @InvocableVariable(label='Status')
+        public String status;
+        @InvocableVariable(label='Role')
+        public String role;
+        global SessionItem() {}
     }
 
     global class Request {
@@ -27,8 +43,8 @@ global with sharing class GetSpeakerSessionCount {
     }
 
     global class Response {
-        @InvocableVariable(label='Session Count')
-        public Integer sessionCount;
+        @InvocableVariable(label='Sessions')
+        public List<SessionItem> sessions;
         @InvocableVariable(label='Resolved Speaker Id')
         public Id speakerId;
         @InvocableVariable(label='Is Ambiguous')
@@ -40,11 +56,12 @@ global with sharing class GetSpeakerSessionCount {
         global Response() {
             this.isAmbiguous = false;
             this.candidates  = new List<CandidateSpeaker>();
+            this.sessions    = new List<SessionItem>();
         }
     }
 
-    @InvocableMethod(label='Get Speaker Session Count' description='Returns the session count for a Speaker, resolved by Id, email, full name, first name, or last name. When multiple speakers match, returns candidates for the user to choose from.')
-    global static List<Response> getSessionCounts(List<Request> requests) {
+    @InvocableMethod(label='Get Speaker Sessions' description='Returns the list of sessions assigned to a speaker, resolved by Id, email, full name, first name, or last name. When multiple speakers match, returns candidates for disambiguation.')
+    global static List<Response> getSpeakerSessions(List<Request> requests) {
         List<Response> responses = new List<Response>();
 
         for (Request req : requests) {
@@ -87,22 +104,32 @@ global with sharing class GetSpeakerSessionCount {
         }
 
         if (!speakerIds.isEmpty()) {
-            Map<Id, Integer> countBySpeaker = new Map<Id, Integer>();
+            Map<Id, List<SessionItem>> sessionsBySpeaker = new Map<Id, List<SessionItem>>();
             for (Id sid : speakerIds) {
-                countBySpeaker.put(sid, 0);
+                sessionsBySpeaker.put(sid, new List<SessionItem>());
             }
-            for (AggregateResult ar : [
-                SELECT Speaker__c, COUNT(Id) cnt
+            for (Session_Speaker__c ss : [
+                SELECT Speaker__c, Role__c,
+                       Session__r.Id, Session__r.Name,
+                       Session__r.Session_Date__c, Session__r.End_Date__c,
+                       Session__r.Status__c
                 FROM Session_Speaker__c
                 WHERE Speaker__c IN :speakerIds
                 WITH USER_MODE
-                GROUP BY Speaker__c
+                ORDER BY Session__r.Session_Date__c ASC NULLS LAST
             ]) {
-                countBySpeaker.put((Id) ar.get('Speaker__c'), (Integer) ar.get('cnt'));
+                SessionItem item = new SessionItem();
+                item.sessionId = ss.Session__r.Id;
+                item.name      = ss.Session__r.Name;
+                item.startTime = ss.Session__r.Session_Date__c;
+                item.endTime   = ss.Session__r.End_Date__c;
+                item.status    = ss.Session__r.Status__c;
+                item.role      = ss.Role__c;
+                sessionsBySpeaker.get(ss.Speaker__c).add(item);
             }
             for (Response res : responses) {
                 if (res.errorMessage == null && !res.isAmbiguous && res.speakerId != null) {
-                    res.sessionCount = countBySpeaker.get(res.speakerId);
+                    res.sessions = sessionsBySpeaker.get(res.speakerId);
                 }
             }
         }

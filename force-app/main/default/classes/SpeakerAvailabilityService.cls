@@ -2,6 +2,8 @@ public with sharing class SpeakerAvailabilityService {
 
     public class Window {
         public Id assignmentId;
+        public Id sessionId;
+        public String sessionName;
         public Datetime startTime;
         public Datetime endTime;
     }
@@ -10,12 +12,14 @@ public with sharing class SpeakerAvailabilityService {
     // availability lookup: full-window overlap when both ends are known, otherwise
     // fall back to an exact start-time match.
     public static Boolean overlaps(Datetime newStart, Datetime newEnd, Datetime existStart, Datetime existEnd) {
-        if (newEnd != null && existEnd != null) {
-            return newStart < existEnd && newEnd > existStart;
+        Datetime effNewEnd = newEnd != null ? newEnd : newStart;
+        Datetime effExistEnd = existEnd != null ? existEnd : existStart;
+        // At least one side has real duration: use strict half-open interval overlap.
+        // Both are points: conflict only on exact same start time.
+        if (newEnd != null || existEnd != null) {
+            return newStart < effExistEnd && effNewEnd > existStart;
         }
-        Datetime effectiveNewEnd = newEnd != null ? newEnd : newStart;
-        Datetime effectiveExistEnd = existEnd != null ? existEnd : existStart;
-        return newStart <= effectiveExistEnd && effectiveNewEnd >= existStart;
+        return newStart == existStart;
     }
 
     // Active (non-cancelled) booking windows per speaker, keyed by assignment Id so
@@ -23,7 +27,9 @@ public with sharing class SpeakerAvailabilityService {
     public static Map<Id, Map<Id, Window>> getActiveWindowsBySpeaker(Set<Id> speakerIds) {
         Map<Id, Map<Id, Window>> windowsBySpeaker = new Map<Id, Map<Id, Window>>();
         for (Session_Speaker__c existing : [
-            SELECT Id, Speaker__c, Session__r.Session_Date__c, Session__r.End_Date__c
+            SELECT Id, Speaker__c,
+                   Session__r.Id, Session__r.Name,
+                   Session__r.Session_Date__c, Session__r.End_Date__c
             FROM Session_Speaker__c
             WHERE Speaker__c IN :speakerIds
               AND Session__r.Status__c != 'Cancelled'
@@ -34,6 +40,8 @@ public with sharing class SpeakerAvailabilityService {
             }
             Window w = new Window();
             w.assignmentId = existing.Id;
+            w.sessionId    = existing.Session__r.Id;
+            w.sessionName  = existing.Session__r.Name;
             w.startTime = existing.Session__r.Session_Date__c;
             w.endTime = existing.Session__r.End_Date__c;
             windowsBySpeaker.get(existing.Speaker__c).put(existing.Id, w);
