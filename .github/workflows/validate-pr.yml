@@ -93,18 +93,51 @@ jobs:
           rm /tmp/sfdx_auth.txt
 
       - name: Validate deploy (check-only, RunLocalTests)
+        id: deploy
+        shell: bash
         run: |
+          set +e
+
           sf project deploy start \
             --source-dir force-app \
             --target-org dev-org \
             --dry-run \
             --test-level RunLocalTests \
             --wait 30 \
-            --json
+            --json > deploy-result.json
+
+          exit_code=$?
+
+          echo "=== Component failures ==="
+          jq -r '
+            (.result.details.componentFailures // [])[] |
+            "COMPONENT [\(.problemType // "Error")] \(.fileName // ""):\(.lineNumber // "?") — \(.problem // "")"
+          ' deploy-result.json || true
+
+          echo "=== Test failures ==="
+          jq -r '
+            (.result.details.runTestResult.failures // [])[] |
+            "TEST \(.name // "").​\(.methodName // "") — \(.message // "")\n  \(.stackTrace // "")"
+          ' deploy-result.json || true
+
+          cat deploy-result.json
+          exit "$exit_code"
 
       - name: Report results
         if: always()
-        run: sf project deploy report --use-most-recent --json || true
+        run: |
+          sf project deploy report \
+            --use-most-recent \
+            --target-org dev-org \
+            --verbose \
+            --json || true
+
+      - name: Upload deployment result
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: deployment-result
+          path: deploy-result.json
 
       - name: Job summary
         if: always()
