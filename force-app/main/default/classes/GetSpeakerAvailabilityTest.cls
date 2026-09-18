@@ -24,7 +24,7 @@ private class GetSpeakerAvailabilityTest {
 
         System.assertEquals(1, responses.size(), 'Should return one response per request');
         System.assert(responses[0].isAvailable, 'Speaker with no bookings should be available');
-        System.assertEquals(null, responses[0].conflictingAssignmentId, 'No conflict should be reported');
+        System.assertEquals(null, responses[0].conflictingSessionId, 'No conflict should be reported');
     }
 
     @IsTest
@@ -49,7 +49,7 @@ private class GetSpeakerAvailabilityTest {
         Test.stopTest();
 
         System.assert(!responses[0].isAvailable, 'Overlapping candidate window should not be available');
-        System.assertEquals(assignment.Id, responses[0].conflictingAssignmentId, 'Should report the conflicting assignment');
+        System.assertEquals(booked.Id, responses[0].conflictingSessionId, 'Should report the conflicting session');
     }
 
     // Note: there is no test here for a booking on an already-cancelled session being ignored.
@@ -59,18 +59,20 @@ private class GetSpeakerAvailabilityTest {
     // has assignments. See SessionSpeakerTriggerHandlerTest.cancelledSession_assignmentRejected.
 
     @IsTest
-    static void nullSpeakerId_throwsIllegalArgumentException() {
+    static void nullSpeakerId_returnsError() {
         GetSpeakerAvailability.Request req = new GetSpeakerAvailability.Request();
-        req.speakerId = null;
         req.startTime = Datetime.now();
 
         Test.startTest();
-        try {
+        List<GetSpeakerAvailability.Response> responses =
             GetSpeakerAvailability.checkAvailability(new List<GetSpeakerAvailability.Request>{ req });
-            System.assert(false, 'Expected IllegalArgumentException was not thrown');
-        } catch (IllegalArgumentException e) {
-            System.assert(e.getMessage().contains('speakerId'), 'Exception message should describe the cause');
-        }
         Test.stopTest();
+
+        System.assertEquals(1, responses.size());
+        System.assertEquals(
+            'Provide a speaker name, email, or Speaker Id.',
+            responses[0].errorMessage,
+            'Missing speaker should return an error message'
+        );
     }
 }

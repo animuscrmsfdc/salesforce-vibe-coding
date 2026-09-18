@@ -93,18 +93,103 @@ jobs:
           rm /tmp/sfdx_auth.txt
 
       - name: Validate deploy (check-only, RunLocalTests)
+        id: deploy
+        shell: bash
         run: |
+          set +e
+
           sf project deploy start \
             --source-dir force-app \
             --target-org dev-org \
             --dry-run \
             --test-level RunLocalTests \
             --wait 30 \
-            --json
+            --json > deploy-start.json
 
-      - name: Report results
+          start_exit_code=$?
+
+          deploy_id=$(jq -r '
+            .result.id // .result.deployId // empty
+          ' deploy-start.json)
+
+          if [ -n "$deploy_id" ]; then
+            sf project deploy report \
+              --job-id "$deploy_id" \
+              --target-org dev-org \
+              --wait 30 \
+              --json > deploy-result.json
+
+            report_exit_code=$?
+          else
+            cp deploy-start.json deploy-result.json
+            report_exit_code=1
+          fi
+
+          echo "=== Deployment status ==="
+          jq -r '
+            .result
+            | {
+                status,
+                success,
+                errorMessage,
+                message,
+                numberTestsTotal,
+                numberTestsCompleted,
+                numberComponentErrors
+              }
+          ' deploy-result.json 2>/dev/null || cat deploy-result.json
+
+          echo "=== Component failures ==="
+          jq -r '
+            def array:
+              if . == null then []
+              elif type == "array" then .
+              else [.] end;
+
+            [
+              .result.details.componentFailures?,
+              .result.details.componentFailure?,
+              .result.componentFailures?
+            ]
+            | map(array)
+            | add[]
+            | "COMPONENT [\(.problemType // "Error")] \(.fileName // ""):\(.lineNumber // "?") — \(.problem // .error // .message // "Unknown error")"
+          ' deploy-result.json 2>/dev/null || true
+
+          echo "=== Test failures ==="
+          jq -r '
+            def array:
+              if . == null then []
+              elif type == "array" then .
+              else [.] end;
+
+            [
+              .result.details.runTestResult.failures?,
+              .result.details.runTestResult.failure?,
+              .result.runTestResult.failures?
+            ]
+            | map(array)
+            | add[]
+            | "TEST \(.name // "") \(.methodName // "") — \(.message // "Unknown failure")\n  \(.stackTrace // "")"
+          ' deploy-result.json 2>/dev/null || true
+
+          echo "=== Raw deployment result ==="
+          cat deploy-result.json
+
+          if [ -n "$deploy_id" ]; then
+            exit "$report_exit_code"
+          fi
+
+          exit "$start_exit_code"
+
+      - name: Upload deployment result
         if: always()
-        run: sf project deploy report --use-most-recent --json || true
+        uses: actions/upload-artifact@v7
+        with:
+          name: deployment-result
+          path: |
+            deploy-start.json
+            deploy-result.json
 
       - name: Job summary
         if: always()
