@@ -108,36 +108,54 @@ jobs:
 
           deploy_exit_code=$?
 
-          sf project deploy report \
-            --use-most-recent \
-            --target-org dev-org \
-            --json > deploy-result.json
+          deploy_id=$(jq -r '
+            .result.id // .result.deployId // empty
+          ' deploy-start.json)
 
-          report_exit_code=$?
+          if [ -n "$deploy_id" ]; then
+            sf project deploy report \
+              --job-id "$deploy_id" \
+              --target-org dev-org \
+              --wait 30 \
+              --json > deploy-result.json
+
+            report_exit_code=$?
+          else
+            cp deploy-start.json deploy-result.json
+            report_exit_code=1
+          fi
 
           echo "=== Component failures ==="
           jq -r '
+            def as_array:
+              if . == null then []
+              elif type == "array" then .
+              else [.] end;
+
             [
-              (.result.details.componentFailures // []),
-              (.result.details.componentFailure // []),
-              (.result.componentFailures // [])
+              (.result.details.componentFailures | as_array),
+              (.result.details.componentFailure | as_array),
+              (.result.componentFailures | as_array)
             ]
-            | add
-            | if type == "array" then .[] else . end
-            | "COMPONENT [\(.problemType // "Error")] \(.fileName // ""):\(.lineNumber // "?") — \(.problem // .error // "")"
-          ' deploy-result.json || true
+            | add[]
+            | "COMPONENT [\(.problemType // "Error")] \(.fileName // ""):\(.lineNumber // "?") — \(.problem // .error // "Unknown error")"
+          ' deploy-result.json 2>/dev/null || true
 
           echo "=== Test failures ==="
           jq -r '
+            def as_array:
+              if . == null then []
+              elif type == "array" then .
+              else [.] end;
+
             [
-              (.result.details.runTestResult.failures // []),
-              (.result.details.runTestResult.failure // []),
-              (.result.runTestResult.failures // [])
+              (.result.details.runTestResult.failures | as_array),
+              (.result.details.runTestResult.failure | as_array),
+              (.result.runTestResult.failures | as_array)
             ]
-            | add
-            | if type == "array" then .[] else . end
-            | "TEST \(.name // "") \(.methodName // "") — \(.message // "")\n  \(.stackTrace // "")"
-          ' deploy-result.json || true
+            | add[]
+            | "TEST \(.name // "") \(.methodName // "") — \(.message // "Unknown failure")\n  \(.stackTrace // "")"
+          ' deploy-result.json 2>/dev/null || true
 
           echo "=== Deployment result ==="
           cat deploy-result.json
@@ -145,23 +163,43 @@ jobs:
           if [ "$deploy_exit_code" -ne 0 ]; then
             exit "$deploy_exit_code"
           fi
+
           exit "$report_exit_code"
 
       - name: Report results
         if: always()
+        shell: bash
         run: |
           if [ -f deploy-result.json ]; then
             jq -r '
-              (.result.details.componentFailures // []) |
-              if type == "array" then .[] else . end |
-              "COMPONENT [\(.problemType // "Error")] \(.fileName // ""):\(.lineNumber // "?") — \(.problem // "")"
-            ' deploy-result.json || true
+              def as_array:
+                if . == null then []
+                elif type == "array" then .
+                else [.] end;
+
+              [
+                (.result.details.componentFailures | as_array),
+                (.result.details.componentFailure | as_array),
+                (.result.componentFailures | as_array)
+              ]
+              | add[]
+              | "COMPONENT [\(.problemType // "Error")] \(.fileName // ""):\(.lineNumber // "?") — \(.problem // .error // "")"
+            ' deploy-result.json 2>/dev/null || true
 
             jq -r '
-              (.result.details.runTestResult.failures // []) |
-              if type == "array" then .[] else . end |
-              "TEST \(.name // "") \(.methodName // "") — \(.message // "")\n  \(.stackTrace // "")"
-            ' deploy-result.json || true
+              def as_array:
+                if . == null then []
+                elif type == "array" then .
+                else [.] end;
+
+              [
+                (.result.details.runTestResult.failures | as_array),
+                (.result.details.runTestResult.failure | as_array),
+                (.result.runTestResult.failures | as_array)
+              ]
+              | add[]
+              | "TEST \(.name // "") \(.methodName // "") — \(.message // "")\n  \(.stackTrace // "")"
+            ' deploy-result.json 2>/dev/null || true
           fi
 
       - name: Upload deployment result
