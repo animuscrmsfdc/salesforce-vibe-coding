@@ -221,6 +221,120 @@ private class AssignSpeakerToSessionTest {
         System.assert(!responses[1].success, 'Second (invalid) request should fail without affecting the first');
     }
 
+    @IsTest
+    static void assignByLastName_speakerFound_succeeds() {
+        Speaker__c speaker = [SELECT Id, Last_Name__c FROM Speaker__c LIMIT 1];
+        Session__c session = new Session__c(
+            Name = 'Last Name Lookup Session',
+            Session_Date__c = Datetime.now().addDays(1),
+            End_Date__c = Datetime.now().addDays(1).addHours(1)
+        );
+        insert session;
+
+        AssignSpeakerToSession.Request req = new AssignSpeakerToSession.Request();
+        req.lastName = speaker.Last_Name__c;
+        req.sessionId = session.Id;
+
+        Test.startTest();
+        List<AssignSpeakerToSession.Response> responses = AssignSpeakerToSession.assignSpeakers(
+            new List<AssignSpeakerToSession.Request>{ req }
+        );
+        Test.stopTest();
+
+        Assert.isTrue(responses[0].success, 'Assignment by last name should succeed when speaker is found uniquely');
+    }
+
+    @IsTest
+    static void assignByEmail_speakerFound_succeeds() {
+        Speaker__c speaker = new Speaker__c(First_Name__c = 'Email', Last_Name__c = 'Lookup', Email__c = 'email.lookup@animuscrm.test');
+        insert speaker;
+        Session__c session = new Session__c(
+            Name = 'Email Lookup Session',
+            Session_Date__c = Datetime.now().addDays(2),
+            End_Date__c = Datetime.now().addDays(2).addHours(1)
+        );
+        insert session;
+
+        AssignSpeakerToSession.Request req = new AssignSpeakerToSession.Request();
+        req.email = 'email.lookup@animuscrm.test';
+        req.sessionId = session.Id;
+
+        Test.startTest();
+        List<AssignSpeakerToSession.Response> responses = AssignSpeakerToSession.assignSpeakers(
+            new List<AssignSpeakerToSession.Request>{ req }
+        );
+        Test.stopTest();
+
+        Assert.isTrue(responses[0].success, 'Assignment by email should succeed when speaker is found');
+    }
+
+    @IsTest
+    static void assignBySessionName_sessionFound_succeeds() {
+        Speaker__c speaker = [SELECT Id FROM Speaker__c LIMIT 1];
+        Session__c session = new Session__c(
+            Name = 'Unique Named Session',
+            Session_Date__c = Datetime.now().addDays(3),
+            End_Date__c = Datetime.now().addDays(3).addHours(1)
+        );
+        insert session;
+
+        AssignSpeakerToSession.Request req = new AssignSpeakerToSession.Request();
+        req.speakerId = speaker.Id;
+        req.sessionName = 'Unique Named Session';
+
+        Test.startTest();
+        List<AssignSpeakerToSession.Response> responses = AssignSpeakerToSession.assignSpeakers(
+            new List<AssignSpeakerToSession.Request>{ req }
+        );
+        Test.stopTest();
+
+        Assert.isTrue(responses[0].success, 'Assignment by session name should succeed when session is uniquely identified');
+    }
+
+    @IsTest
+    static void assignBySessionName_noMatch_returnsFailure() {
+        Speaker__c speaker = [SELECT Id FROM Speaker__c LIMIT 1];
+
+        AssignSpeakerToSession.Request req = new AssignSpeakerToSession.Request();
+        req.speakerId = speaker.Id;
+        req.sessionName = 'NonExistentSessionXYZ12345';
+
+        Test.startTest();
+        List<AssignSpeakerToSession.Response> responses = AssignSpeakerToSession.assignSpeakers(
+            new List<AssignSpeakerToSession.Request>{ req }
+        );
+        Test.stopTest();
+
+        Assert.isFalse(responses[0].success, 'Assignment should fail when session name matches no records');
+        Assert.isTrue(responses[0].message.contains('No future session found'),
+            'Message should indicate no session was found');
+    }
+
+    @IsTest
+    static void assignByName_speakerNotFound_returnsRecentSpeakersList() {
+        Session__c session = new Session__c(
+            Name = 'Session For Name Lookup',
+            Session_Date__c = Datetime.now().addDays(4),
+            End_Date__c = Datetime.now().addDays(4).addHours(1)
+        );
+        insert session;
+
+        AssignSpeakerToSession.Request req = new AssignSpeakerToSession.Request();
+        req.lastName = 'ZZZ_NoSuchSpeakerEver';
+        req.sessionId = session.Id;
+
+        Test.startTest();
+        List<AssignSpeakerToSession.Response> responses = AssignSpeakerToSession.assignSpeakers(
+            new List<AssignSpeakerToSession.Request>{ req }
+        );
+        Test.stopTest();
+
+        Assert.isFalse(responses[0].success, 'Assignment should fail when speaker name matches nothing');
+        Assert.isTrue(responses[0].message.contains('No speaker found'),
+            'Message should explain no speaker was found');
+        Assert.isNotNull(responses[0].speakerCandidates, 'Recent speakers list should be populated as suggestions');
+    }
+
     private static User createSessionSpeakerUser() {
         Profile standardProfile = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
         User u = new User(
