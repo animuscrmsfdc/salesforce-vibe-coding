@@ -106,7 +106,7 @@ jobs:
             --wait 30 \
             --json > deploy-start.json
 
-          deploy_exit_code=$?
+          start_exit_code=$?
 
           deploy_id=$(jq -r '
             .result.id // .result.deployId // empty
@@ -125,82 +125,62 @@ jobs:
             report_exit_code=1
           fi
 
+          echo "=== Deployment status ==="
+          jq -r '
+            .result
+            | {
+                status,
+                success,
+                errorMessage,
+                message,
+                numberTestsTotal,
+                numberTestsCompleted,
+                numberComponentErrors
+              }
+          ' deploy-result.json 2>/dev/null || cat deploy-result.json
+
           echo "=== Component failures ==="
           jq -r '
-            def as_array:
+            def array:
               if . == null then []
               elif type == "array" then .
               else [.] end;
 
             [
-              (.result.details.componentFailures | as_array),
-              (.result.details.componentFailure | as_array),
-              (.result.componentFailures | as_array)
+              .result.details.componentFailures?,
+              .result.details.componentFailure?,
+              .result.componentFailures?
             ]
+            | map(array)
             | add[]
-            | "COMPONENT [\(.problemType // "Error")] \(.fileName // ""):\(.lineNumber // "?") — \(.problem // .error // "Unknown error")"
+            | "COMPONENT [\(.problemType // "Error")] \(.fileName // ""):\(.lineNumber // "?") — \(.problem // .error // .message // "Unknown error")"
           ' deploy-result.json 2>/dev/null || true
 
           echo "=== Test failures ==="
           jq -r '
-            def as_array:
+            def array:
               if . == null then []
               elif type == "array" then .
               else [.] end;
 
             [
-              (.result.details.runTestResult.failures | as_array),
-              (.result.details.runTestResult.failure | as_array),
-              (.result.runTestResult.failures | as_array)
+              .result.details.runTestResult.failures?,
+              .result.details.runTestResult.failure?,
+              .result.runTestResult.failures?
             ]
+            | map(array)
             | add[]
             | "TEST \(.name // "") \(.methodName // "") — \(.message // "Unknown failure")\n  \(.stackTrace // "")"
           ' deploy-result.json 2>/dev/null || true
 
-          echo "=== Deployment result ==="
+          echo "=== Raw deployment result ==="
           cat deploy-result.json
 
-          if [ "$deploy_exit_code" -ne 0 ]; then
-            exit "$deploy_exit_code"
+          if [ -n "$deploy_id" ]; then
+            exit "$report_exit_code"
           fi
 
-          exit "$report_exit_code"
-
-      - name: Report results
-        if: always()
-        shell: bash
-        run: |
-          if [ -f deploy-result.json ]; then
-            jq -r '
-              def as_array:
-                if . == null then []
-                elif type == "array" then .
-                else [.] end;
-
-              [
-                (.result.details.componentFailures | as_array),
-                (.result.details.componentFailure | as_array),
-                (.result.componentFailures | as_array)
-              ]
-              | add[]
-              | "COMPONENT [\(.problemType // "Error")] \(.fileName // ""):\(.lineNumber // "?") — \(.problem // .error // "")"
-            ' deploy-result.json 2>/dev/null || true
-
-            jq -r '
-              def as_array:
-                if . == null then []
-                elif type == "array" then .
-                else [.] end;
-
-              [
-                (.result.details.runTestResult.failures | as_array),
-                (.result.details.runTestResult.failure | as_array),
-                (.result.runTestResult.failures | as_array)
-              ]
-              | add[]
-              | "TEST \(.name // "") \(.methodName // "") — \(.message // "")\n  \(.stackTrace // "")"
-            ' deploy-result.json 2>/dev/null || true
-          fi
+          exit "$start_exit_code"
 
       - name: Upload deployment result
         if: always()
