@@ -34,7 +34,7 @@ jobs:
 
       - name: Cache sf CLI
         id: cache-sf
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.npm-global
           key: sf-cli-${{ runner.os }}-v7
@@ -46,7 +46,7 @@ jobs:
 
       - name: Cache sfdx-scanner plugin
         id: cache-scanner
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.local/share/sf
           key: sf-scanner-${{ runner.os }}-v4
